@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx @nestjs/cli --version)",
+      "Bash(npx @nestjs/cli new backend --package-manager npm --skip-git --strict)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(dnd-kit)",
+      "Bash(lucide\" 2>&1 | head -20)",
+      "Bash(docker compose *)",
+      "Bash(Get-Content .env)",
+      "Bash(Select-String \"DATABASE_URL\")",
+      "Bash(npm run *)",
+      "Bash(node dist/main.js)",
+      "Bash(echo \"Backend PID: $!\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"test@example.com\",\"password\":\"Password123!\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/auth/register -H 'Content-Type: application/json' -d '{\"displayName\":\"Test User\",\"email\":\"test@example.com\",\"password\":\"Password123!\",\"organizationName\":\"Mi Org\"}')",
+      "Bash(echo \"Frontend PID: $!\")",
+      "Bash(curl *)"
+    ]
+  }
+}

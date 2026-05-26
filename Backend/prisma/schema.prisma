@@ -1,0 +1,505 @@
+// =============================================================================
+// schema.prisma — Plataforma E2E Automation con IA
+// =============================================================================
+// Decisiones de diseño registradas:
+//   - Multi-tenancy: instancia privada, aislamiento por Organization.id (org_id)
+//   - Auth: JWT propio (NestJS). Tablas: User, RefreshToken
+//   - Roles: Admin | Editor | Viewer por membresía, no global
+//   - Versiones de tests: snapshot JSONB en PostgreSQL (sin filesystem externo)
+//   - Self-Healing: propone fix → PENDING_APPROVAL → usuario acepta/rechaza
+//   - RLS: conceptual via app-layer (SET LOCAL app.current_org_id) + políticas SQL
+//   - Concurrencia objetivo: 5–20 ejecuciones simultáneas en entorno local
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum MemberRole {
+  ADMIN   // Gestión completa de la organización
+  EDITOR  // Crear, editar y ejecutar tests
+  VIEWER  // Solo lectura y visualización de reportes
+}
+
+enum TestStatus {
+  DRAFT      // Recién creado, sin pasos definidos
+  ACTIVE     // Listo para ejecutarse
+  ARCHIVED   // Deshabilitado, no aparece en ejecuciones
+}
+
+enum ExecutionStatus {
+  QUEUED           // En cola BullMQ, esperando worker
+  PROVISIONING     // Docker container iniciando
+  RUNNING          // Playwright ejecutando pasos
+  COLLECTING       // Recopilando artefactos (video, screenshots, trazas)
+  COMPLETED        // Finalizado exitosamente
+  FAILED           // Falló durante la ejecución
+  CANCELLED        // Cancelado manualmente por el usuario
+}
+
+enum StepResultStatus {
+  PASSED   // Paso ejecutado sin errores
+  FAILED   // Paso falló (assertion, timeout, selector roto)
+  SKIPPED  // Paso omitido (condicional o dependencia fallida)
+}
+
+enum HealingStatus {
+  PENDING_APPROVAL // IA propuso fix, esperando aprobación del usuario
+  APPROVED         // Usuario aprobó, fix aplicado al step
+  REJECTED         // Usuario rechazó la propuesta
+  SUPERSEDED       // Reemplazado por una propuesta más reciente
+}
+
+enum AiOperationType {
+  CODEGEN          // Generación de código TypeScript POM
+  SELF_HEALING     // Propuesta de reparación de selector
+  NL_TO_FLOW       // Lenguaje natural → modelo semántico de test
+  DOCUMENTATION    // Generación de documentación de test
+  CHAT             // Consulta libre al agente contextual
+}
+
+enum GitProvider {
+  GITHUB
+  GITLAB
+}
+
+enum SecretType {
+  ENV_VAR          // Variable de entorno para ejecuciones
+  GIT_TOKEN        // Token de acceso a repositorio Git
+  WEBHOOK_SECRET   // Secret para webhooks entrantes
+}
+
+// =============================================================================
+// DOMINIO: IDENTIDAD Y MULTI-TENANCY
+// =============================================================================
+
+// Unidad raíz de aislamiento. Todos los recursos pertenecen a una Organization.
+// RLS: SET LOCAL app.current_org_id = '<uuid>' en cada transacción de la app.
+// Las políticas SQL filtran por org_id usando current_setting('app.current_org_id').
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique // URL-friendly identifier
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  memberships Membership[]
+  projects    Project[]
+  secrets     Secret[]
+  gitConfigs  GitIntegration[]
+
+  @@map("organizations")
+}
+
+// Usuario de la plataforma. Existe independientemente de la organización.
+// Un usuario puede pertenecer a múltiples organizaciones con roles distintos.
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  displayName  String
+  passwordHash String   // bcrypt hash, nunca texto plano
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  memberships    Membership[]
+  refreshTokens  RefreshToken[]
+  aiAuditLogs    AiAuditLog[]
+  healingReviews SelectorHealingLog[] @relation("HealingReviewer")
+
+  @@map("users")
+}
+
+// Tabla de unión User ↔ Organization con rol.
+// Es la fuente de verdad para permisos. El JWT lleva userId + orgId,
+// NestJS guard verifica el rol en esta tabla en cada request.
+model Membership {
+  id             String     @id @default(uuid())
+  userId         String
+  organizationId String
+  role           MemberRole
+  joinedAt       DateTime   @default(now())
+
+  // Relaciones
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId]) // Un usuario, un rol por org
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+// Token de refresco JWT. Rotación obligatoria en cada uso (refresh token rotation).
+// El campo revokedAt permite invalidación sin borrar el registro (audit trail).
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique // SHA-256 del token raw, nunca el token en claro
+  expiresAt DateTime
+  revokedAt DateTime? // null = activo, fecha = revocado
+  createdAt DateTime  @default(now())
+  userAgent String?   // User-Agent del cliente que lo generó
+  ipAddress String?   // IP del cliente que lo generó
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// =============================================================================
+// DOMINIO: PROYECTOS Y TESTS
+// =============================================================================
+
+// Proyecto de testing. Agrupa suites y tests bajo una organización.
+// Cada proyecto tiene su propia URL base objetivo (baseUrl).
+model Project {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  baseUrl        String   // URL de la aplicación bajo prueba
+  isArchived     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relaciones
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  testSuites   TestSuite[]
+  executions   Execution[]
+
+  @@index([organizationId])
+  @@map("projects")
+}
+
+// Agrupador lógico de tests. Equivalente a un archivo .spec.ts en Playwright.
+model TestSuite {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tests   Test[]
+
+  @@index([projectId])
+  @@map("test_suites")
+}
+
+// Test individual. Contiene pasos y tiene versiones.
+// semanticModel: representación intermedia JSON del flujo, agnóstica al lenguaje.
+// generatedCode: TypeScript POM generado a partir del semanticModel.
+model Test {
+  id             String     @id @default(uuid())
+  suiteId        String
+  name           String
+  description    String?
+  status         TestStatus @default(DRAFT)
+  semanticModel  Json       // Semantic Model: [{action, target, value, assertion}]
+  generatedCode  String?    // TypeScript POM generado por el AI Engine
+  currentVersion Int        @default(1) // Apunta a TestVersion.versionNumber activo
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Relaciones
+  suite        TestSuite            @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  steps        TestStep[]
+  versions     TestVersion[]
+  execResults  ExecutionResult[]
+  healingLogs  SelectorHealingLog[]
+
+  @@index([suiteId])
+  @@map("tests")
+}
+
+// Paso atómico de un test. Representa una sola acción o assertion.
+// selector: puede ser CSS, XPath o text-based. Es el campo que self-healing repara.
+// confidenceScore: valor 0.0–1.0 asignado por IA al selector actual.
+model TestStep {
+  id              String  @id @default(uuid())
+  testId          String
+  order           Int     // Posición en la secuencia, 0-indexed
+  action          String  // click | fill | navigate | assert | hover | wait | select
+  selector        String? // Target del DOM (null para acciones sin target como navigate)
+  selectorType    String? // css | xpath | text | role | testId
+  value           String? // Valor para fill, navigate URL, texto para assert, etc.
+  description     String? // Descripción legible para el perfil No-Code
+  confidenceScore Float?  // 0.0–1.0: confianza IA en que el selector sigue válido
+  isDisabled      Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relaciones
+  test        Test                 @relation(fields: [testId], references: [id], onDelete: Cascade)
+  stepResults StepResult[]
+  healingLogs SelectorHealingLog[]
+
+  @@index([testId])
+  @@map("test_steps")
+}
+
+// Snapshot inmutable de un test en un momento dado.
+// snapshotData: copia completa del semanticModel + steps en JSONB al momento del snapshot.
+// Se crea automáticamente antes de cada modificación significativa y en ejecuciones.
+model TestVersion {
+  id            String   @id @default(uuid())
+  testId        String
+  versionNumber Int      // Semántico: incrementa por cada snapshot
+  label         String?  // Etiqueta opcional: "v1.0", "antes de self-healing", etc.
+  snapshotData  Json     // JSONB: copia completa de {semanticModel, steps, generatedCode}
+  createdByAi   Boolean  @default(false) // true si fue generado por el AI Engine
+  changelog     String?  // Descripción de qué cambió respecto a la versión anterior
+  createdAt     DateTime @default(now())
+
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, versionNumber])
+  @@index([testId])
+  @@map("test_versions")
+}
+
+// =============================================================================
+// DOMINIO: EJECUCIONES
+// =============================================================================
+
+// Ejecución de un proyecto completo o suite específica.
+// Creada por el usuario, encolada en BullMQ, procesada por un worker Docker.
+// dockerContainerId: ID del contenedor efímero creado para esta ejecución.
+model Execution {
+  id                String          @id @default(uuid())
+  projectId         String
+  triggeredBy       String          // userId que disparó la ejecución
+  status            ExecutionStatus @default(QUEUED)
+  dockerContainerId String?         // Asignado al iniciar PROVISIONING
+  startedAt         DateTime?       // Asignado al pasar a RUNNING
+  completedAt       DateTime?       // Asignado al pasar a COMPLETED/FAILED/CANCELLED
+  errorMessage      String?         // Mensaje de error si status = FAILED
+  reportUrl         String?         // URL del reporte HTML generado post-ejecución
+  createdAt         DateTime        @default(now())
+
+  // Relaciones
+  project Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  results ExecutionResult[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("executions")
+}
+
+// Resultado de un test individual dentro de una ejecución.
+// screenshotUrl / videoUrl / traceUrl: rutas a artefactos almacenados en volumen Docker.
+model ExecutionResult {
+  id            String          @id @default(uuid())
+  executionId   String
+  testId        String
+  status        ExecutionStatus // COMPLETED | FAILED (subset aplicable a resultados)
+  durationMs    Int?            // Duración total del test en milisegundos
+  screenshotUrl String?         // Screenshot final del test
+  videoUrl      String?         // Video de la ejecución completa
+  traceUrl      String?         // Trace Playwright (.zip)
+  errorMessage  String?
+  createdAt     DateTime        @default(now())
+
+  // Relaciones
+  execution   Execution    @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  test        Test         @relation(fields: [testId], references: [id])
+  stepResults StepResult[]
+
+  @@index([executionId])
+  @@index([testId])
+  @@map("execution_results")
+}
+
+// Resultado de un paso individual dentro de un ExecutionResult.
+// errorDetails: stacktrace o mensaje de Playwright en caso de fallo.
+model StepResult {
+  id                String           @id @default(uuid())
+  executionResultId String
+  stepId            String
+  status            StepResultStatus
+  durationMs        Int?
+  screenshotUrl     String?          // Screenshot en el momento exacto del paso
+  errorDetails      String?          // Stacktrace o mensaje de error de Playwright
+  actualValue       String?          // Valor real observado (útil para assertions)
+  createdAt         DateTime         @default(now())
+
+  // Relaciones
+  executionResult ExecutionResult @relation(fields: [executionResultId], references: [id], onDelete: Cascade)
+  step            TestStep        @relation(fields: [stepId], references: [id])
+
+  @@index([executionResultId])
+  @@map("step_results")
+}
+
+// =============================================================================
+// DOMINIO: AI ENGINE — AUDITORÍA Y SELF-HEALING
+// =============================================================================
+
+// Registro de auditoría de cada operación realizada por el AI Engine.
+// inputTokens / outputTokens: para monitoreo de costos DeepSeek API.
+// latencyMs: para detectar degradación del servicio.
+// NUNCA borrar registros de esta tabla — es audit trail permanente.
+model AiAuditLog {
+  id            String          @id @default(uuid())
+  userId        String
+  operationType AiOperationType
+  modelUsed     String          // "deepseek-chat" | "deepseek-coder", etc.
+  promptSummary String          // Resumen no sensible del prompt enviado
+  inputTokens   Int?
+  outputTokens  Int?
+  latencyMs     Int?
+  success       Boolean
+  errorMessage  String?         // Si success = false
+  relatedTestId String?         // Test relacionado con la operación (si aplica)
+  createdAt     DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([operationType])
+  @@index([createdAt])
+  @@map("ai_audit_logs")
+}
+
+// Propuesta de reparación de selector generada por el AI Engine.
+// Flujo: IA detecta selector roto → crea registro PENDING_APPROVAL →
+//        usuario revisa → APPROVED (aplica fix al TestStep) | REJECTED
+// approvedAt / rejectedAt: timestamps de la decisión del usuario.
+// reviewedBy: FK al usuario que tomó la decisión.
+model SelectorHealingLog {
+  id              String        @id @default(uuid())
+  testId          String
+  stepId          String
+  brokenSelector  String        // Selector original que falló
+  proposedSelector String       // Selector propuesto por la IA
+  confidenceBefore Float        // Confianza IA del selector roto (0.0–1.0)
+  confidenceAfter  Float        // Confianza IA del selector propuesto (0.0–1.0)
+  reasoning       String        // Explicación de la IA de por qué propone este fix
+  status          HealingStatus @default(PENDING_APPROVAL)
+  reviewedBy      String?       // userId que aprobó/rechazó
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?       // Motivo opcional si el usuario rechaza
+  createdAt       DateTime      @default(now())
+
+  // Relaciones
+  test     Test      @relation(fields: [testId], references: [id], onDelete: Cascade)
+  step     TestStep  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  reviewer User?     @relation("HealingReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([testId])
+  @@index([status])
+  @@map("selector_healing_logs")
+}
+
+// =============================================================================
+// DOMINIO: GIT INTEGRATION
+// =============================================================================
+
+// Configuración de sincronización con repositorio Git por organización.
+// encryptedToken: token cifrado con la clave del Secrets Manager (no en claro).
+// syncPath: ruta dentro del repo donde se escriben los archivos POM generados.
+model GitIntegration {
+  id             String      @id @default(uuid())
+  organizationId String
+  provider       GitProvider
+  repoUrl        String      // https://github.com/org/repo
+  defaultBranch  String      @default("main")
+  syncPath       String      @default("e2e/") // Ruta relativa dentro del repo
+  encryptedToken String      // Token cifrado — descifrado solo en runtime via Vault
+  isActive       Boolean     @default(true)
+  lastSyncedAt   DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("git_integrations")
+}
+
+// =============================================================================
+// DOMINIO: SECRETS MANAGER
+// =============================================================================
+
+// Almacén de secretos por organización.
+// encryptedValue: cifrado AES-256 via wrapper de Vault/Secrets Manager.
+// La clave de cifrado NUNCA está en la DB — vive en Vault o variable de entorno.
+// Estos secretos se inyectan como variables de entorno en los contenedores Docker
+// de ejecución, nunca se exponen al frontend.
+model Secret {
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String     // Nombre de la variable: "BASE_URL_PROD", "AUTH_TOKEN"
+  encryptedValue String     // Valor cifrado AES-256
+  type           SecretType
+  description    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name]) // No duplicar nombres por org
+  @@index([organizationId])
+  @@map("secrets")
+}
+
+// =============================================================================
+// ESTRATEGIA RLS — NOTAS CONCEPTUALES
+// =============================================================================
+//
+// Prisma no genera políticas RLS directamente. La estrategia es:
+//
+// 1. CONFIGURACIÓN DE SESIÓN (app-layer):
+//    Antes de cada query, el interceptor NestJS ejecuta:
+//      SET LOCAL app.current_org_id = '<uuid-de-la-org-del-usuario>';
+//    Esto usa variables de sesión PostgreSQL para propagar el contexto.
+//
+// 2. POLÍTICAS SQL (aplicar via migraciones manuales post-prisma migrate):
+//    Para cada tabla con org_id (directa o indirecta via JOIN):
+//
+//    ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+//    CREATE POLICY org_isolation ON projects
+//      USING (organization_id = current_setting('app.current_org_id')::uuid);
+//
+//    Para tablas con org_id indirecto (ej: test_steps -> tests -> suites -> projects):
+//    Se recomienda una función auxiliar:
+//
+//    CREATE FUNCTION get_current_org_id() RETURNS uuid AS $$
+//      SELECT current_setting('app.current_org_id')::uuid;
+//    $$ LANGUAGE sql STABLE;
+//
+// 3. ROL DE BASE DE DATOS:
+//    La app usa un rol PostgreSQL sin SUPERUSER:
+//      CREATE ROLE app_user WITH LOGIN PASSWORD '...';
+//      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES TO app_user;
+//    Las políticas RLS no aplican a SUPERUSER — por eso el rol debe ser restringido.
+//
+// 4. BYPASS CONTROLADO:
+//    Solo el rol de migraciones (prisma_migrations) hace BYPASSRLS para DDL.
+//    NUNCA usar BYPASSRLS en el rol de la aplicación en producción.
+//
+// Tablas con RLS directo (tienen organization_id):
+//   organizations, memberships, projects, secrets, git_integrations
+//
+// Tablas con RLS indirecto (heredan via relación):
+//   test_suites, tests, test_steps, test_versions,
+//   executions, execution_results, step_results,
+//   selector_healing_logs, ai_audit_logs
+//
+// =============================================================================

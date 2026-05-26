@@ -1,0 +1,25 @@
+# Override para desarrollo local — levanta solo infraestructura, backend corre con npm run start:dev
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run start:dev
+
+  worker:
+    build:
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: node dist/workers/bootstrap-worker.js

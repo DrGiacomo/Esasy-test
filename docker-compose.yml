@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: e2e_postgres
+    environment:
+      POSTGRES_USER: e2e_user
+      POSTGRES_PASSWORD: e2e_pass
+      POSTGRES_DB: e2e_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e_user -d e2e_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: e2e_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - e2e-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile
+    container_name: e2e_backend
+    env_file: .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - e2e-net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.worker
+    container_name: e2e_worker
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - artifacts:/artifacts
+    networks:
+      - e2e-net
+
+  # Servicios de imagen — se buildean pero no se levantan en el stack normal.
+  # Usar: docker compose --profile build-images build
+  recorder:
+    build:
+      context: ./recorder
+      dockerfile: Dockerfile
+    image: e2e-platform/recorder:latest
+    profiles:
+      - build-images
+    networks:
+      - e2e-net
+
+  executor:
+    build:
+      context: ./executor
+      dockerfile: Dockerfile
+    image: e2e-platform/executor:latest
+    profiles:
+      - build-images
+    networks:
+      - e2e-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  artifacts:
+
+networks:
+  e2e-net:
+    driver: bridge

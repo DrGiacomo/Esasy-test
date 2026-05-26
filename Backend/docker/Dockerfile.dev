@@ -1,0 +1,10 @@
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+# La fuente se monta como volumen — no se copia aquí
+# node_modules se preserva como volumen anónimo en docker-compose.dev.yml
+EXPOSE 3000
+CMD ["npm", "run", "start:dev"]
