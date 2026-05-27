@@ -61,12 +61,13 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
     client.to(`session:${data.sessionId}`).emit('frame', data);
   }
 
-  // El recorder container emite 'action:captured' → gateway lo retransmite al frontend
+  // El recorder container emite 'action:captured' → se acumula en el servicio y se retransmite al frontend
   @SubscribeMessage('action:captured')
   handleActionCaptured(
     @MessageBody() data: { sessionId: string; step: object },
     @ConnectedSocket() client: Socket,
   ) {
+    this.recorderService.addStep(data.sessionId, data.step as any);
     client.to(`session:${data.sessionId}`).emit('action:captured', data);
   }
 }

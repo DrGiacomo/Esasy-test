@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { FolderOpen, Play, Video, Settings, BarChart3, Bot } from 'lucide-react';
+import { FolderOpen, Play, Video, Settings, Bot, Film } from 'lucide-react';
 import { ROUTES } from '@/router/routes';
 
 const nav = [
-  { label: 'Proyectos', icon: FolderOpen, to: ROUTES.PROJECTS },
-  { label: 'Grabador', icon: Video, to: ROUTES.RECORDER },
-  { label: 'Ejecuciones', icon: Play, to: ROUTES.EXECUTIONS },
-  { label: 'Configuración', icon: Settings, to: ROUTES.SETTINGS },
+  { label: 'Proyectos',    icon: FolderOpen, to: ROUTES.PROJECTS },
+  { label: 'Grabador',     icon: Video,      to: ROUTES.RECORDER },
+  { label: 'Grabaciones',  icon: Film,       to: ROUTES.RECORDINGS },
+  { label: 'Ejecuciones',  icon: Play,       to: ROUTES.EXECUTIONS },
+  { label: 'Configuración',icon: Settings,   to: ROUTES.SETTINGS },
 ];
 
 export function Sidebar() {

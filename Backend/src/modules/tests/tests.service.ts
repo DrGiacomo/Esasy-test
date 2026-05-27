@@ -13,6 +13,15 @@ export class TestsService {
     private readonly versions: TestVersionsService,
   ) {}
 
+  async findSuite(suiteId: string, user: JwtPayload) {
+    const suite = await this.prisma.testSuite.findFirst({
+      where: { id: suiteId, project: { organizationId: user.orgId } },
+      select: { id: true, name: true, projectId: true },
+    });
+    if (!suite) throw new NotFoundException('Suite not found');
+    return suite;
+  }
+
   async create(suiteId: string, dto: CreateTestDto, user: JwtPayload): Promise<TestResponseDto> {
     await this.assertSuiteOwnership(suiteId, user.orgId);
     return this.prisma.test.create({
@@ -37,7 +46,7 @@ export class TestsService {
   async findById(id: string, user: JwtPayload): Promise<TestResponseDto> {
     const test = await this.prisma.test.findFirst({
       where: { id, suite: { project: { organizationId: user.orgId } } },
-      include: { steps: { orderBy: { order: 'asc' } } },
+      include: { steps: { orderBy: { order: 'asc' } }, suite: { select: { projectId: true } } },
     });
     if (!test) throw new NotFoundException('Test not found');
     return test;

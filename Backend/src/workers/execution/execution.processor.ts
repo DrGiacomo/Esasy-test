@@ -37,13 +37,20 @@ export class ExecutionProcessor extends WorkerHost {
         return;
       }
 
+      // Crear un ExecutionResult por cada test (el executor los lee para saber qué ejecutar)
+      for (const test of tests) {
+        await this.prisma.executionResult.create({
+          data: { executionId, testId: test.id, status: ExecutionStatus.RUNNING },
+        });
+      }
+
       // Lanzar contenedor Docker con los datos de la ejecución
       const envVars = [
         `EXECUTION_ID=${executionId}`,
         `PROJECT_ID=${projectId}`,
         `ORG_ID=${orgId}`,
-        `REDIS_URL=${process.env.REDIS_URL}`,
-        `DATABASE_URL=${process.env.DATABASE_URL}`,
+        `REDIS_URL=${process.env.CONTAINER_REDIS_URL ?? process.env.REDIS_URL}`,
+        `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
       ];
 
       const containerId = await this.docker.runExecutionContainer(executionId, envVars);

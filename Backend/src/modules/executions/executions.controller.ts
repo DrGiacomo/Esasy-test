@@ -41,6 +41,14 @@ export class ExecutionsController {
     return this.executionsService.findById(id, user);
   }
 
+  @Get(':id/results')
+  findResults(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.executionsService.findResults(id, user);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   cancel(

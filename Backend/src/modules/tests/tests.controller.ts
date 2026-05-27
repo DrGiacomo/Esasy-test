@@ -36,6 +36,14 @@ export class TestsController {
     return this.testsService.create(suiteId, dto, user);
   }
 
+  @Get('suites/:suiteId')
+  findSuite(
+    @Param('suiteId') suiteId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.testsService.findSuite(suiteId, user);
+  }
+
   @Get('suites/:suiteId/tests')
   findAllTests(
     @Param('suiteId') suiteId: string,

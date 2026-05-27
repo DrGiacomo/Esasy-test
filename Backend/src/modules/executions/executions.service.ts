@@ -69,6 +69,15 @@ export class ExecutionsService {
     return execution;
   }
 
+  async findResults(id: string, user: JwtPayload) {
+    await this.findById(id, user);
+    return this.prisma.executionResult.findMany({
+      where: { executionId: id },
+      include: { test: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async cancel(id: string, user: JwtPayload): Promise<void> {
     const execution = await this.findById(id, user);
 

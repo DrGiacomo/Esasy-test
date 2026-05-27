@@ -40,6 +40,8 @@ export default function RegisterPage() {
                 <input
                   type={type}
                   required
+                  minLength={key === 'password' ? 8 : key === 'displayName' || key === 'organizationName' ? 2 : undefined}
+                  maxLength={key === 'password' ? 64 : 80}
                   value={form[key as keyof typeof form]}
                   onChange={field(key as keyof typeof form)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"

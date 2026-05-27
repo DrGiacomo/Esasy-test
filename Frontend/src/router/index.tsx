@@ -13,6 +13,7 @@ const TestsListPage = lazy(() => import('@/features/tests/pages/TestsListPage'))
 const TestDetailPage = lazy(() => import('@/features/tests/pages/TestDetailPage'));
 const FlowEditorPage = lazy(() => import('@/features/flow-editor/pages/FlowEditorPage'));
 const RecorderPage = lazy(() => import('@/features/recorder/pages/RecorderPage'));
+const RecordingsPage = lazy(() => import('@/features/recorder/pages/RecordingsPage'));
 const ExecutionsListPage = lazy(() => import('@/features/executions/pages/ExecutionsListPage'));
 const ExecutionDetailPage = lazy(() => import('@/features/executions/pages/ExecutionDetailPage'));
 const ReportViewerPage = lazy(() => import('@/features/reports/pages/ReportViewerPage'));
@@ -43,6 +44,7 @@ export function AppRouter() {
               <Route path="/tests/:testId" element={<TestDetailPage />} />
               <Route path="/tests/:testId/editor" element={<FlowEditorPage />} />
               <Route path={ROUTES.RECORDER} element={<RecorderPage />} />
+              <Route path={ROUTES.RECORDINGS} element={<div className="p-6 max-w-4xl mx-auto"><RecordingsPage /></div>} />
               <Route path={ROUTES.EXECUTIONS} element={<ExecutionsListPage />} />
               <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
               <Route path="/reports/:executionId" element={<ReportViewerPage />} />

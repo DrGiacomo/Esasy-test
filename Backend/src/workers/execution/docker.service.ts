@@ -4,7 +4,11 @@ import Docker from 'dockerode';
 
 @Injectable()
 export class DockerService {
-  private readonly docker = new Docker({ socketPath: '/var/run/docker.sock' });
+  private readonly docker = new Docker(
+    process.platform === 'win32'
+      ? { socketPath: '//./pipe/dockerDesktopLinuxEngine' }
+      : { socketPath: '/var/run/docker.sock' },
+  );
   private readonly logger = new Logger(DockerService.name);
 
   constructor(private readonly config: ConfigService) {}
