@@ -148,8 +148,14 @@ async function main() {
       let errorMessage = null;
       let failedStepId = null;
 
-      const context = await browser.newContext();
-      const page    = await context.newPage();
+      const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
+      const context = await browser.newContext({
+        recordVideo: {
+          dir: path.join(ARTIFACTS_DIR, EXECUTION_ID),
+          size: { width: 1280, height: 720 },
+        },
+      });
+      const page = await context.newPage();
 
       try {
         for (const step of activeSteps) {
@@ -166,7 +172,7 @@ async function main() {
           );
         }
 
-        // Final screenshot
+        // Screenshot final como thumbnail
         const screenshotPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}_final.png`);
         await page.screenshot({ path: screenshotPath });
         console.log(`[executor] Test "${test_name}" PASSED`);
@@ -184,6 +190,8 @@ async function main() {
           ).catch(() => null);
         }
       } finally {
+        // Guardar video antes de cerrar el contexto
+        await page.video()?.saveAs(videoPath).catch(() => null);
         await context.close();
       }
 
