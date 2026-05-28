@@ -18,7 +18,7 @@ export function useExecutionSocket(executionId: string) {
   useEffect(() => {
     if (!executionId) return;
 
-    executionsSocket.connect();
+    if (!executionsSocket.connected) executionsSocket.connect();
     executionsSocket.emit('execution:subscribe', { executionId });
 
     const onStatus = (data: ExecutionEvent) => {
@@ -35,7 +35,8 @@ export function useExecutionSocket(executionId: string) {
       executionsSocket.off('execution:status', onStatus);
       executionsSocket.off('result:completed', onStatus);
       executionsSocket.off('result:started', onStatus);
-      executionsSocket.disconnect();
+      // No desconectamos el singleton — solo salimos del room.
+      // La conexión persiste para la próxima ejecución.
     };
   }, [executionId]);
 
