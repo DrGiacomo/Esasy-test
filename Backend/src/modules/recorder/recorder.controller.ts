@@ -40,6 +40,13 @@ export class RecorderController {
     return this.recorderService.getRecording(id, user.orgId);
   }
 
+  @Delete('recordings/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
+  deleteRecording(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.recorderService.deleteRecording(id, user.orgId);
+  }
+
   @Post('recordings/:id/convert')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
   convertToTest(

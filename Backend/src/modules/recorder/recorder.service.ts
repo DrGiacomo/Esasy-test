@@ -195,6 +195,11 @@ export class RecorderService implements OnModuleDestroy {
     return rec;
   }
 
+  async deleteRecording(id: string, orgId: string): Promise<void> {
+    await this.getRecording(id, orgId);
+    await this.prisma.recording.delete({ where: { id } });
+  }
+
   private async saveRecording(session: RecorderSession): Promise<void> {
     try {
       await this.prisma.recording.create({

@@ -27,16 +27,22 @@ export function useRecordings(projectId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function fetch() {
     setLoading(true);
     const params = projectId ? `?projectId=${projectId}` : '';
     api.get<Recording[]>(`/recorder/recordings${params}`)
       .then(r => setRecordings(r.data))
-      .catch(e => setError(e.message))
+      .catch(e => setError((e as Error).message))
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }
 
-  return { recordings, loading, error };
+  useEffect(() => { fetch(); }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { recordings, loading, error, refetch: fetch };
+}
+
+export async function deleteRecording(id: string): Promise<void> {
+  await api.delete(`/recorder/recordings/${id}`);
 }
 
 export async function convertRecordingToTest(

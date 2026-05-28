@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { ExecutionStatus } from '@prisma/client';
+import { ExecutionStatus, Prisma } from '@prisma/client';
 import { Job } from 'bullmq';
 import { createClient } from 'redis';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -84,15 +84,16 @@ export class ExecutionProcessor extends WorkerHost {
       await this.transition(executionId, finalStatus);
     } catch (err) {
       this.logger.error(`Execution ${executionId} failed: ${String(err)}`);
-      await this.prisma.execution.update({
-        where: { id: executionId },
-        data: {
-          status: ExecutionStatus.FAILED,
-          errorMessage: String(err),
-          completedAt: new Date(),
-        },
-      });
-      await this.publish(executionId, 'execution:error', { message: String(err) });
+      const isDeleted = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025';
+      if (!isDeleted) {
+        await this.prisma.execution.update({
+          where: { id: executionId },
+          data: { status: ExecutionStatus.FAILED, errorMessage: String(err), completedAt: new Date() },
+        }).catch((e) => {
+          if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) throw e;
+        });
+        await this.publish(executionId, 'execution:error', { message: String(err) });
+      }
     } finally {
       await this.publisher.disconnect();
     }
@@ -103,7 +104,15 @@ export class ExecutionProcessor extends WorkerHost {
     if (([ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED] as ExecutionStatus[]).includes(status)) {
       data['completedAt'] = new Date();
     }
-    await this.prisma.execution.update({ where: { id: executionId }, data });
+    try {
+      await this.prisma.execution.update({ where: { id: executionId }, data });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+        this.logger.warn(`Execution ${executionId} was deleted — skipping transition to ${status}`);
+        return;
+      }
+      throw err;
+    }
     await this.publish(executionId, 'execution:status', { status });
     this.logger.log(`Execution ${executionId} → ${status}`);
   }

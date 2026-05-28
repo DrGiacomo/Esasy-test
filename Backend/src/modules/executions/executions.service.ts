@@ -94,14 +94,23 @@ export class ExecutionsService {
       ExecutionStatus.QUEUED,
       ExecutionStatus.PROVISIONING,
       ExecutionStatus.RUNNING,
+      ExecutionStatus.COLLECTING,
     ];
-    if (!cancellable.includes(execution.status)) {
-      throw new BadRequestException(`Cannot cancel execution with status ${execution.status}`);
-    }
+    const deletable: ExecutionStatus[] = [
+      ExecutionStatus.COMPLETED,
+      ExecutionStatus.FAILED,
+      ExecutionStatus.CANCELLED,
+    ];
 
-    await this.prisma.execution.update({
-      where: { id },
-      data: { status: ExecutionStatus.CANCELLED, completedAt: new Date() },
-    });
+    if (cancellable.includes(execution.status)) {
+      await this.prisma.execution.update({
+        where: { id },
+        data: { status: ExecutionStatus.CANCELLED, completedAt: new Date() },
+      });
+    } else if (deletable.includes(execution.status)) {
+      await this.prisma.execution.delete({ where: { id } });
+    } else {
+      throw new BadRequestException(`Cannot remove execution with status ${execution.status}`);
+    }
   }
 }

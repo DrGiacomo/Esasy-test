@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Clock, Globe, ChevronDown, ChevronUp, Wand2 } from 'lucide-react';
-import { useRecordings, convertRecordingToTest, type Recording, type RecordingStep } from '../hooks/useRecordings';
+import { Video, Clock, Globe, ChevronDown, ChevronUp, Wand2, Trash2 } from 'lucide-react';
+import { useRecordings, convertRecordingToTest, deleteRecording, type Recording, type RecordingStep } from '../hooks/useRecordings';
 import { useProjects } from '@/features/projects/hooks/useProjects';
 import { api } from '@/lib/api/axios.client';
 import { Button } from '@/components/ui/Button';
@@ -130,14 +130,28 @@ function ConvertModal({ rec, onClose, onConverted }: {
   );
 }
 
-function RecordingRow({ rec }: { rec: Recording }) {
+function RecordingRow({ rec, onDeleted }: { rec: Recording; onDeleted: () => void }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function handleConverted(testId: string) {
     setConverting(false);
     navigate(ROUTES.TEST_DETAIL(testId));
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('¿Eliminar esta grabación? Esta acción no se puede deshacer.')) return;
+    setDeleting(true);
+    try {
+      await deleteRecording(rec.id);
+      onDeleted();
+    } catch {
+      alert('Error al eliminar la grabación');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -160,6 +174,14 @@ function RecordingRow({ rec }: { rec: Recording }) {
         <Button size="sm" onClick={() => setConverting(true)} disabled={rec.steps.length === 0}>
           <Wand2 size={13} />
           Convertir
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          onClick={() => void handleDelete()}
+          loading={deleting}
+        >
+          <Trash2 size={13} />
         </Button>
       </div>
 
@@ -186,7 +208,7 @@ function RecordingRow({ rec }: { rec: Recording }) {
 }
 
 export default function RecordingsPage({ projectId }: { projectId?: string }) {
-  const { recordings, loading, error } = useRecordings(projectId);
+  const { recordings, loading, error, refetch } = useRecordings(projectId);
 
   if (loading) return (
     <div className="flex items-center justify-center h-full py-20">
@@ -213,7 +235,7 @@ export default function RecordingsPage({ projectId }: { projectId?: string }) {
         </div>
       ) : (
         <div className="space-y-2">
-          {recordings.map(rec => <RecordingRow key={rec.id} rec={rec} />)}
+          {recordings.map(rec => <RecordingRow key={rec.id} rec={rec} onDeleted={refetch} />)}
         </div>
       )}
     </div>

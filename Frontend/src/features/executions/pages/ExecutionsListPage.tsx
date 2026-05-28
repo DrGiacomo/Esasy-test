@@ -1,20 +1,42 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, ChevronRight } from 'lucide-react';
+import { Play, ChevronRight, XCircle, Trash2 } from 'lucide-react';
 import { executionsApi } from '../executions.api';
 import type { Execution } from '@/types/models';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { Button } from '@/components/ui/Button';
 import { ROUTES } from '@/router/routes';
+
+const ACTIVE_STATUSES = ['QUEUED', 'PROVISIONING', 'RUNNING', 'COLLECTING'];
 
 export default function ExecutionsListPage() {
   const [executions, setExecutions] = useState<Execution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   useEffect(() => {
     executionsApi.getAll().then(setExecutions).finally(() => setLoading(false));
   }, []);
+
+  async function handleRemove(e: React.MouseEvent, execution: Execution) {
+    e.preventDefault();
+    const isActive = ACTIVE_STATUSES.includes(execution.status);
+    const msg = isActive
+      ? '¿Cancelar esta ejecución en progreso?'
+      : '¿Eliminar esta ejecución? Esta acción no se puede deshacer.';
+    if (!window.confirm(msg)) return;
+    setActionId(execution.id);
+    try {
+      await executionsApi.cancel(execution.id);
+      setExecutions((prev) => prev.filter((ex) => ex.id !== execution.id));
+    } catch (err) {
+      alert(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setActionId(null);
+    }
+  }
 
   return (
     <div>
@@ -32,18 +54,30 @@ export default function ExecutionsListPage() {
 
       {!loading && executions.length > 0 && (
         <div className="space-y-2">
-          {executions.map((e) => (
-            <Link
-              key={e.id}
-              to={ROUTES.EXECUTION_DETAIL(e.id)}
-              className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-indigo-300 hover:bg-indigo-50"
-            >
-              <StatusBadge status={e.status} />
-              <span className="flex-1 text-sm text-gray-700 font-mono">{e.id.slice(0, 8)}…</span>
-              <span className="text-xs text-gray-400">{new Date(e.createdAt).toLocaleString()}</span>
-              <ChevronRight size={16} className="text-gray-400" />
-            </Link>
-          ))}
+          {executions.map((e) => {
+            const isActive = ACTIVE_STATUSES.includes(e.status);
+            return (
+              <div key={e.id} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-indigo-200">
+                <Link
+                  to={ROUTES.EXECUTION_DETAIL(e.id)}
+                  className="flex flex-1 items-center gap-4 min-w-0"
+                >
+                  <StatusBadge status={e.status} />
+                  <span className="flex-1 text-sm text-gray-700 font-mono">{e.id.slice(0, 8)}…</span>
+                  <span className="text-xs text-gray-400">{new Date(e.createdAt).toLocaleString()}</span>
+                  <ChevronRight size={16} className="text-gray-400" />
+                </Link>
+                <Button
+                  size="sm"
+                  variant={isActive ? 'secondary' : 'danger'}
+                  loading={actionId === e.id}
+                  onClick={(ev) => void handleRemove(ev, e)}
+                >
+                  {isActive ? <XCircle size={13} /> : <Trash2 size={13} />}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

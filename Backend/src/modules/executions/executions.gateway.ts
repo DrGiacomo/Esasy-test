@@ -12,7 +12,7 @@ import { createClient } from 'redis';
 import { Server, Socket } from 'socket.io';
 import { ConfigService } from '@nestjs/config';
 
-@WebSocketGateway({ namespace: '/executions', cors: { origin: '*' } })
+@WebSocketGateway({ namespace: '/executions', cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 60000 })
 export class ExecutionsGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit, OnModuleDestroy
 {
