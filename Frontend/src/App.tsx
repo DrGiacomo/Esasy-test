@@ -22,11 +22,15 @@ function parseJwt(token: string): TokenPayload | null {
 
 export default function App() {
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setHydrated = useAuthStore((s) => s.setHydrated);
 
   // Auto-refresh al cargar la app si hay refresh token en storage
   useEffect(() => {
     const refreshToken = tokenStorage.getRefreshToken();
-    if (!refreshToken) return;
+    if (!refreshToken) {
+      setHydrated();
+      return;
+    }
 
     api
       .post<{ accessToken: string; refreshToken: string; expiresIn: number }>(
@@ -52,8 +56,11 @@ export default function App() {
       })
       .catch(() => {
         tokenStorage.clearRefreshToken();
+      })
+      .finally(() => {
+        setHydrated();
       });
-  }, [setAuth]);
+  }, [setAuth, setHydrated]);
 
   return <AppRouter />;
 }

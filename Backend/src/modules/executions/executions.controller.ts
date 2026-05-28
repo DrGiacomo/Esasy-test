@@ -25,6 +25,11 @@ export class ExecutionsController {
     return this.executionsService.trigger(dto, user);
   }
 
+  @Get()
+  findAllForOrg(@CurrentUser() user: JwtPayload): Promise<ExecutionResponseDto[]> {
+    return this.executionsService.findAllForOrg(user);
+  }
+
   @Get('project/:projectId')
   findAll(
     @Param('projectId') projectId: string,

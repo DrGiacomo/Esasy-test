@@ -95,7 +95,7 @@ export interface StepResult {
   status: StepResultStatus;
   durationMs: number;
   actualValue: string | null;
-  errorMessage: string | null;
+  errorDetails: string | null;
   step?: TestStep;
 }
 

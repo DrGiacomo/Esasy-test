@@ -48,6 +48,14 @@ export class ExecutionsService {
     return execution;
   }
 
+  async findAllForOrg(user: JwtPayload): Promise<ExecutionResponseDto[]> {
+    return this.prisma.execution.findMany({
+      where: { project: { organizationId: user.orgId } },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
   async findAll(projectId: string, user: JwtPayload): Promise<ExecutionResponseDto[]> {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId: user.orgId },

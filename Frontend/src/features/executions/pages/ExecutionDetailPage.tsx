@@ -25,12 +25,31 @@ export default function ExecutionDetailPage() {
       .finally(() => setLoading(false));
   }, [executionId]);
 
-  // Refetch results cuando la ejecución completa
+  // Refetch results cuando la ejecución completa vía WebSocket
   useEffect(() => {
     if ((status === 'COMPLETED' || status === 'FAILED') && executionId) {
       executionsApi.getResults(executionId).then(setResults);
     }
   }, [status, executionId]);
+
+  // Polling de respaldo: si la ejecución sigue activa y el socket no actualizó, refetch cada 3s
+  useEffect(() => {
+    if (!executionId || !execution) return;
+    const active = ['QUEUED', 'PROVISIONING', 'RUNNING', 'COLLECTING'];
+    if (!active.includes(execution.status) && !active.includes(status ?? '')) return;
+
+    const interval = setInterval(async () => {
+      const updated = await executionsApi.getOne(executionId);
+      setExecution(updated);
+      if (!active.includes(updated.status)) {
+        const res = await executionsApi.getResults(executionId);
+        setResults(res);
+        clearInterval(interval);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [executionId, execution?.status, status]);
 
   if (loading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>;
   if (!execution) return <p className="text-gray-500">Ejecución no encontrada</p>;
