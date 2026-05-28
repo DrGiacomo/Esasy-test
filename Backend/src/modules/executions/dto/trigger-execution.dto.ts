@@ -7,4 +7,8 @@ export class TriggerExecutionDto {
   @IsOptional()
   @IsUUID()
   suiteId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  testId?: string;
 }

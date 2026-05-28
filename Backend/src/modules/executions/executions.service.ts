@@ -38,6 +38,7 @@ export class ExecutionsService {
       projectId: dto.projectId,
       orgId: user.orgId,
       suiteId: dto.suiteId,
+      testId: dto.testId,
     };
 
     await this.queue.add('run', jobData, {

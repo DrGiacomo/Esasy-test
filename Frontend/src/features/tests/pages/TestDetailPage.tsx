@@ -37,7 +37,7 @@ export default function TestDetailPage() {
         const updated = await testsApi.update(test.id, { status: 'ACTIVE' });
         setTest((prev) => prev ? { ...prev, status: updated.status } : prev);
       }
-      const execution = await executionsApi.trigger({ projectId, suiteId: test.suiteId });
+      const execution = await executionsApi.trigger({ projectId, suiteId: test.suiteId, testId: test.id });
       navigate(`/executions/${execution.id}`);
     } catch (err) {
       alert(`Error al ejecutar: ${err instanceof Error ? err.message : String(err)}`);

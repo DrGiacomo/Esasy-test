@@ -22,7 +22,7 @@ export class ExecutionProcessor extends WorkerHost {
   }
 
   async process(job: Job<ExecutionJobData>): Promise<void> {
-    const { executionId, projectId, orgId, suiteId } = job.data;
+    const { executionId, projectId, orgId, suiteId, testId } = job.data;
 
     this.publisher = createClient({ url: process.env.REDIS_URL });
     await this.publisher.connect();
@@ -31,7 +31,7 @@ export class ExecutionProcessor extends WorkerHost {
       await this.transition(executionId, ExecutionStatus.PROVISIONING);
 
       // Obtener tests a ejecutar
-      const tests = await this.getTests(projectId, suiteId);
+      const tests = await this.getTests(projectId, suiteId, testId);
       if (tests.length === 0) {
         await this.transition(executionId, ExecutionStatus.COMPLETED);
         return;
@@ -115,9 +115,10 @@ export class ExecutionProcessor extends WorkerHost {
     );
   }
 
-  private async getTests(projectId: string, suiteId?: string) {
+  private async getTests(projectId: string, suiteId?: string, testId?: string) {
     return this.prisma.test.findMany({
       where: {
+        ...(testId ? { id: testId } : {}),
         suite: {
           projectId,
           ...(suiteId ? { id: suiteId } : {}),
