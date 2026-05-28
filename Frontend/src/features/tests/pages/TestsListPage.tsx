@@ -54,7 +54,16 @@ export default function TestsListPage() {
 
       {!loading && tests.length > 0 && (
         <div className="space-y-2">
-          {tests.map((t) => <TestCard key={t.id} test={t} />)}
+          {tests.map((t) => (
+            <TestCard
+              key={t.id}
+              test={t}
+              onArchive={async (id) => {
+                await testsApi.archive(id);
+                setTests((prev) => prev.filter((x) => x.id !== id));
+              }}
+            />
+          ))}
         </div>
       )}
 

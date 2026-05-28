@@ -1,11 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.setGlobalPrefix('api/v1');
+
+  const artifactsPath = process.env.ARTIFACTS_VOLUME_PATH ?? 'C:/artifacts';
+  app.useStaticAssets(artifactsPath, { prefix: '/artifacts' });
 
   app.useGlobalPipes(
     new ValidationPipe({
