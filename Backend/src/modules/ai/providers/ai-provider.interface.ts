@@ -11,8 +11,13 @@ export interface AiResponse {
   modelUsed: string;
 }
 
+export interface AiCompleteOptions {
+  /** Fuerza la salida a un objeto JSON válido (response_format json_object). */
+  json?: boolean;
+}
+
 export interface AiProvider {
-  complete(messages: AiMessage[], model?: string): Promise<AiResponse>;
+  complete(messages: AiMessage[], model?: string, options?: AiCompleteOptions): Promise<AiResponse>;
 }
 
 export const AI_PROVIDER = Symbol('AiProvider');

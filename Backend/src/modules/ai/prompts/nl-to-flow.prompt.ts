@@ -5,7 +5,7 @@ export function buildNlToFlowPrompt(naturalLanguage: string, baseUrl: string): A
     {
       role: 'system',
       content: `You are an expert QA engineer. Convert a natural language test description into a structured semantic test model.
-Output ONLY a JSON array of steps. Each step: { "action": "click|fill|navigate|assert|hover|wait|select", "target": "description of element", "value": "value if needed", "assertion": "expected value if assert" }
+Output ONLY a JSON object of the form { "steps": [ ... ] }. Each step: { "action": "click|fill|navigate|assert|hover|wait|select", "target": "description of element", "value": "value if needed", "assertion": "expected value if assert" }
 No explanations.`,
     },
     {

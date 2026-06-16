@@ -1,10 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AiOperationType, HealingStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AiAuditService } from '../audit/ai-audit.service';
 import { buildSelfHealingPrompt } from '../prompts/self-healing.prompt';
 import type { AiProvider } from '../providers/ai-provider.interface';
 import { AI_PROVIDER } from '../providers/ai-provider.interface';
+import { parseAiJson } from '../util/parse-json';
 
 @Injectable()
 export class SelfHealingService {
@@ -14,29 +15,34 @@ export class SelfHealingService {
     private readonly audit: AiAuditService,
   ) {}
 
-  async propose(stepId: string, pageHtml: string, userId: string) {
-    const step = await this.prisma.testStep.findUniqueOrThrow({
-      where: { id: stepId },
+  async propose(stepId: string, pageHtml: string, userId: string, orgId: string) {
+    const step = await this.prisma.testStep.findFirst({
+      where: { id: stepId, test: { suite: { project: { organizationId: orgId } } } },
       include: { test: true },
     });
+    if (!step) throw new NotFoundException('Test step not found');
 
     const messages = buildSelfHealingPrompt(step.action, step.selector ?? '', pageHtml);
 
     let result;
     try {
-      result = await this.ai.complete(messages);
+      result = await this.ai.complete(messages, undefined, { json: true });
       await this.audit.log(userId, AiOperationType.SELF_HEALING, `Heal step: ${stepId}`, result, step.testId);
     } catch (err) {
       await this.audit.log(userId, AiOperationType.SELF_HEALING, `Heal step: ${stepId}`, { error: String(err) }, step.testId);
       throw err;
     }
 
-    const parsed = JSON.parse(result.content) as {
-      selector: string;
-      selectorType: string;
-      confidence: number;
-      reasoning: string;
-    };
+    const parsed = parseAiJson<{
+      selector?: string;
+      selectorType?: string;
+      confidence?: number;
+      reasoning?: string;
+    }>(result.content);
+
+    if (!parsed.selector || typeof parsed.confidence !== 'number') {
+      throw new BadRequestException('AI returned an invalid selector proposal');
+    }
 
     // Marcar propuestas anteriores como SUPERSEDED
     await this.prisma.selectorHealingLog.updateMany({
@@ -52,16 +58,21 @@ export class SelfHealingService {
         proposedSelector: parsed.selector,
         confidenceBefore: step.confidenceScore ?? 0,
         confidenceAfter: parsed.confidence,
-        reasoning: parsed.reasoning,
+        reasoning: parsed.reasoning ?? '',
         status: HealingStatus.PENDING_APPROVAL,
       },
     });
   }
 
-  async approve(healingLogId: string, userId: string) {
-    const log = await this.prisma.selectorHealingLog.findUniqueOrThrow({
-      where: { id: healingLogId },
+  async approve(healingLogId: string, userId: string, orgId: string) {
+    const log = await this.prisma.selectorHealingLog.findFirst({
+      where: { id: healingLogId, test: { suite: { project: { organizationId: orgId } } } },
     });
+    if (!log) throw new NotFoundException('Healing log not found');
+
+    if (log.status !== HealingStatus.PENDING_APPROVAL) {
+      throw new BadRequestException(`Healing log is not pending approval (status: ${log.status})`);
+    }
 
     // Aplicar el fix al TestStep
     await this.prisma.testStep.update({
@@ -78,7 +89,12 @@ export class SelfHealingService {
     });
   }
 
-  async reject(healingLogId: string, userId: string, reason?: string) {
+  async reject(healingLogId: string, userId: string, orgId: string, reason?: string) {
+    const log = await this.prisma.selectorHealingLog.findFirst({
+      where: { id: healingLogId, test: { suite: { project: { organizationId: orgId } } } },
+    });
+    if (!log) throw new NotFoundException('Healing log not found');
+
     return this.prisma.selectorHealingLog.update({
       where: { id: healingLogId },
       data: {
