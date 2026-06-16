@@ -8,10 +8,15 @@ import { ExecutionJobData, EXECUTION_QUEUE } from '../../modules/executions/queu
 import { DockerService } from './docker.service';
 import { ArtifactCollectorService } from './artifact-collector.service';
 
+type RedisClient = ReturnType<typeof createClient>;
+
+type WaitOutcome = { exitCode: number | null; aborted: 'cancelled' | 'timeout' | null };
+
+const CANCEL_POLL_MS = 3000;
+
 @Processor(EXECUTION_QUEUE)
 export class ExecutionProcessor extends WorkerHost {
   private readonly logger = new Logger(ExecutionProcessor.name);
-  private publisher: ReturnType<typeof createClient>;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -24,27 +29,28 @@ export class ExecutionProcessor extends WorkerHost {
   async process(job: Job<ExecutionJobData>): Promise<void> {
     const { executionId, projectId, orgId, suiteId, testId } = job.data;
 
-    this.publisher = createClient({ url: process.env.REDIS_URL });
-    await this.publisher.connect();
+    // Cliente Redis local al job — NUNCA un campo de instancia (el WorkerHost es singleton
+    // y con concurrencia >1 dos jobs se pisarían el publisher).
+    const publisher = createClient({ url: process.env.REDIS_URL });
+    await publisher.connect();
+
+    let containerId: string | undefined;
 
     try {
-      await this.transition(executionId, ExecutionStatus.PROVISIONING);
+      await this.transition(publisher, executionId, ExecutionStatus.PROVISIONING);
 
-      // Obtener tests a ejecutar
       const tests = await this.getTests(projectId, suiteId, testId);
       if (tests.length === 0) {
-        await this.transition(executionId, ExecutionStatus.COMPLETED);
+        await this.transition(publisher, executionId, ExecutionStatus.COMPLETED);
         return;
       }
 
-      // Crear un ExecutionResult por cada test (el executor los lee para saber qué ejecutar)
-      for (const test of tests) {
-        await this.prisma.executionResult.create({
-          data: { executionId, testId: test.id, status: ExecutionStatus.RUNNING },
-        });
-      }
+      // Idempotencia: limpiar resultados de un intento previo (reintento BullMQ) y recrear.
+      await this.prisma.executionResult.deleteMany({ where: { executionId } });
+      await this.prisma.executionResult.createMany({
+        data: tests.map((t) => ({ executionId, testId: t.id, status: ExecutionStatus.RUNNING })),
+      });
 
-      // Lanzar contenedor Docker con los datos de la ejecución
       const envVars = [
         `EXECUTION_ID=${executionId}`,
         `PROJECT_ID=${projectId}`,
@@ -53,75 +59,172 @@ export class ExecutionProcessor extends WorkerHost {
         `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
       ];
 
-      const containerId = await this.docker.runExecutionContainer(executionId, envVars);
+      containerId = await this.docker.runExecutionContainer(executionId, envVars);
       await this.prisma.execution.update({
         where: { id: executionId },
         data: { dockerContainerId: containerId, startedAt: new Date() },
       });
 
-      await this.transition(executionId, ExecutionStatus.RUNNING);
+      await this.transition(publisher, executionId, ExecutionStatus.RUNNING);
 
-      const { exitCode } = await this.docker.waitForContainer(containerId);
+      const outcome = await this.waitForContainerOrAbort(containerId, executionId);
 
-      await this.transition(executionId, ExecutionStatus.COLLECTING);
+      // Si se abortó (cancelación o timeout), detener el contenedor ya mismo.
+      if (outcome.aborted) {
+        await this.docker.stopAndRemove(containerId);
+        containerId = undefined; // ya removido — evita doble intento en el finally
+      }
 
-      // Recopilar artefactos de cada resultado
-      const results = await this.prisma.executionResult.findMany({
-        where: { executionId },
-      });
+      if (outcome.aborted === 'cancelled') {
+        this.logger.log(`Execution ${executionId} cancelled — container stopped`);
+        await this.prisma.executionResult.updateMany({
+          where: { executionId, status: ExecutionStatus.RUNNING },
+          data: { status: ExecutionStatus.CANCELLED },
+        });
+        await this.publish(publisher, executionId, 'execution:status', {
+          status: ExecutionStatus.CANCELLED,
+        });
+        return; // el status CANCELLED ya lo fijó cancel()
+      }
 
+      await this.transition(publisher, executionId, ExecutionStatus.COLLECTING);
+
+      const results = await this.prisma.executionResult.findMany({ where: { executionId } });
       for (const result of results) {
         const urls = this.artifacts.getArtifactUrls(executionId, result.testId);
-        await this.prisma.executionResult.update({
-          where: { id: result.id },
-          data: urls,
-        });
+        await this.prisma.executionResult.update({ where: { id: result.id }, data: urls });
       }
 
-      await this.docker.stopAndRemove(containerId);
+      if (outcome.aborted === 'timeout') {
+        await this.failExecution(publisher, executionId, `Execution timed out after ${this.timeoutMs()}ms`);
+        return;
+      }
 
-      const finalStatus = exitCode === 0 ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED;
-      await this.transition(executionId, finalStatus);
+      const finalStatus = outcome.exitCode === 0 ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED;
+      await this.transition(publisher, executionId, finalStatus);
     } catch (err) {
       this.logger.error(`Execution ${executionId} failed: ${String(err)}`);
-      const isDeleted = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025';
-      if (!isDeleted) {
-        await this.prisma.execution.update({
-          where: { id: executionId },
-          data: { status: ExecutionStatus.FAILED, errorMessage: String(err), completedAt: new Date() },
-        }).catch((e) => {
-          if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025')) throw e;
+      if (!this.isDeleted(err)) {
+        await this.failExecution(publisher, executionId, String(err)).catch((e) => {
+          if (!this.isDeleted(e)) throw e;
         });
-        await this.publish(executionId, 'execution:error', { message: String(err) });
       }
     } finally {
-      await this.publisher.disconnect();
+      // Garantiza que ningún contenedor quede huérfano ante cualquier salida.
+      if (containerId) await this.docker.stopAndRemove(containerId).catch(() => undefined);
+      await publisher.disconnect().catch(() => undefined);
     }
   }
 
-  private async transition(executionId: string, status: ExecutionStatus): Promise<void> {
+  /**
+   * Espera a que el contenedor termine, compitiendo contra:
+   *  - cancelación del usuario (poll del status en BD cada 3s)
+   *  - timeout máximo de ejecución
+   */
+  private async waitForContainerOrAbort(containerId: string, executionId: string): Promise<WaitOutcome> {
+    const timers: NodeJS.Timeout[] = [];
+    let active = true;
+
+    const exitP: Promise<WaitOutcome> = this.docker
+      .waitForContainer(containerId)
+      .then((r) => ({ exitCode: r.exitCode, aborted: null }));
+
+    const timeoutP = new Promise<WaitOutcome>((resolve) => {
+      timers.push(setTimeout(() => resolve({ exitCode: null, aborted: 'timeout' }), this.timeoutMs()));
+    });
+
+    const cancelP = new Promise<WaitOutcome>((resolve) => {
+      const poll = async () => {
+        if (!active) return;
+        const ex = await this.prisma.execution
+          .findUnique({ where: { id: executionId }, select: { status: true } })
+          .catch(() => null);
+        if (!active) return;
+        if (!ex || ex.status === ExecutionStatus.CANCELLED) {
+          resolve({ exitCode: null, aborted: 'cancelled' });
+          return;
+        }
+        timers.push(setTimeout(() => void poll(), CANCEL_POLL_MS));
+      };
+      timers.push(setTimeout(() => void poll(), CANCEL_POLL_MS));
+    });
+
+    try {
+      return await Promise.race([exitP, timeoutP, cancelP]);
+    } finally {
+      active = false;
+      timers.forEach(clearTimeout);
+    }
+  }
+
+  private async transition(
+    publisher: RedisClient,
+    executionId: string,
+    status: ExecutionStatus,
+  ): Promise<void> {
+    // No pisar una cancelación realizada por el usuario mientras el job seguía vivo.
+    if (status !== ExecutionStatus.PROVISIONING) {
+      const cur = await this.prisma.execution
+        .findUnique({ where: { id: executionId }, select: { status: true } })
+        .catch(() => null);
+      if (!cur) return; // borrada
+      if (cur.status === ExecutionStatus.CANCELLED) {
+        this.logger.warn(`Execution ${executionId} already CANCELLED — skipping → ${status}`);
+        return;
+      }
+    }
+
     const data: Record<string, unknown> = { status };
-    if (([ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED] as ExecutionStatus[]).includes(status)) {
+    if (
+      ([ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED] as ExecutionStatus[]).includes(
+        status,
+      )
+    ) {
       data['completedAt'] = new Date();
     }
     try {
       await this.prisma.execution.update({ where: { id: executionId }, data });
     } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+      if (this.isDeleted(err)) {
         this.logger.warn(`Execution ${executionId} was deleted — skipping transition to ${status}`);
         return;
       }
       throw err;
     }
-    await this.publish(executionId, 'execution:status', { status });
+    await this.publish(publisher, executionId, 'execution:status', { status });
     this.logger.log(`Execution ${executionId} → ${status}`);
   }
 
-  private async publish(executionId: string, event: string, payload: object): Promise<void> {
-    await this.publisher.publish(
+  private async failExecution(publisher: RedisClient, executionId: string, message: string): Promise<void> {
+    const cur = await this.prisma.execution
+      .findUnique({ where: { id: executionId }, select: { status: true } })
+      .catch(() => null);
+    if (!cur || cur.status === ExecutionStatus.CANCELLED) return; // no clobber cancel/borrada
+    await this.prisma.execution.update({
+      where: { id: executionId },
+      data: { status: ExecutionStatus.FAILED, errorMessage: message, completedAt: new Date() },
+    });
+    await this.publish(publisher, executionId, 'execution:error', { message });
+  }
+
+  private async publish(
+    publisher: RedisClient,
+    executionId: string,
+    event: string,
+    payload: object,
+  ): Promise<void> {
+    await publisher.publish(
       `execution:${executionId}:events`,
       JSON.stringify({ event, executionId, ...payload, timestamp: Date.now() }),
     );
+  }
+
+  private timeoutMs(): number {
+    return parseInt(process.env.EXECUTION_TIMEOUT_MS ?? '600000', 10);
+  }
+
+  private isDeleted(err: unknown): boolean {
+    return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025';
   }
 
   private async getTests(projectId: string, suiteId?: string, testId?: string) {

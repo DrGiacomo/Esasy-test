@@ -17,6 +17,10 @@ export class DockerService {
     const image = this.config.get<string>('EXECUTION_IMAGE')!;
     const network = this.config.get<string>('DOCKER_NETWORK')!;
 
+    // Idempotencia: si un intento previo dejó un contenedor con este nombre, eliminarlo
+    // antes de crear (evita el conflicto de nombre 409 en reintentos de BullMQ).
+    await this.removeByName(`exec-${executionId}`);
+
     const container = await this.docker.createContainer({
       name: `exec-${executionId}`,
       Image: image,
@@ -47,6 +51,16 @@ export class DockerService {
       await container.remove();
     } catch (err) {
       this.logger.warn(`Could not remove container ${containerId}: ${String(err)}`);
+    }
+  }
+
+  /** Elimina (forzado) un contenedor por nombre si existe. No falla si no existe. */
+  async removeByName(name: string): Promise<void> {
+    try {
+      await this.docker.getContainer(name).remove({ force: true });
+      this.logger.warn(`Removed pre-existing container ${name}`);
+    } catch {
+      // No existe — nada que hacer.
     }
   }
 }
