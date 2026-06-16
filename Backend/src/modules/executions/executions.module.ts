@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import { AuthModule } from '../auth/auth.module';
 import { ExecutionsController } from './executions.controller';
 import { ExecutionsGateway } from './executions.gateway';
 import { ExecutionsService } from './executions.service';
@@ -8,6 +9,7 @@ import { EXECUTION_QUEUE } from './queues/execution.queue';
 
 @Module({
   imports: [
+    AuthModule,
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

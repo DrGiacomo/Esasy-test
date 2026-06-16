@@ -6,6 +6,7 @@ const { io } = require('socket.io-client');
 const SESSION_ID = process.env.SESSION_ID;
 const TARGET_URL = process.env.TARGET_URL;
 const BACKEND_WS_URL = process.env.BACKEND_WS_URL || 'ws://backend:3000';
+const RECORDER_TOKEN = process.env.RECORDER_TOKEN;
 
 if (!SESSION_ID || !TARGET_URL) {
   process.stderr.write('Missing required env vars: SESSION_ID, TARGET_URL\n');
@@ -47,6 +48,7 @@ async function main() {
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
+    auth: { token: RECORDER_TOKEN },
   });
 
   function captureAction(step) {

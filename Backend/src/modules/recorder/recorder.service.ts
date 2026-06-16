@@ -5,6 +5,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import Docker from 'dockerode';
 import { randomUUID } from 'crypto';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
@@ -32,6 +33,7 @@ export class RecorderService implements OnModuleDestroy {
   constructor(
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
   ) {}
 
   async start(projectId: string, targetUrl: string, user: JwtPayload): Promise<RecorderSession> {
@@ -44,6 +46,13 @@ export class RecorderService implements OnModuleDestroy {
       throw new Error(`Docker image "${image}" not found. Run: docker compose --profile build-images build`);
     }
 
+    // Token de sesión firmado para que el contenedor se autentique en el gateway WS.
+    // Solo da acceso a ESTA sesión, nunca a datos de la organización.
+    const recorderToken = this.jwt.sign(
+      { kind: 'recorder', sessionId },
+      { expiresIn: '31m' }, // un poco más que el auto-expire de 30 min
+    );
+
     const container = await this.docker.createContainer({
       name: `recorder-${sessionId}`,
       Image: image,
@@ -51,6 +60,7 @@ export class RecorderService implements OnModuleDestroy {
         `SESSION_ID=${sessionId}`,
         `TARGET_URL=${targetUrl}`,
         `BACKEND_WS_URL=ws://host.docker.internal:3000`,
+        `RECORDER_TOKEN=${recorderToken}`,
       ],
       HostConfig: { NetworkMode: network, AutoRemove: false, ShmSize: 256 * 1024 * 1024 },
     });
@@ -68,18 +78,25 @@ export class RecorderService implements OnModuleDestroy {
       steps: [],
     };
 
+    session.expireTimer = setTimeout(() => void this.expire(sessionId), 30 * 60 * 1000);
+
     this.sessions.set(sessionId, session);
     this.logger.log(`Recorder session started: ${sessionId}`);
-
-    setTimeout(() => this.expire(sessionId), 30 * 60 * 1000);
 
     return session;
   }
 
   async stop(sessionId: string, user: JwtPayload): Promise<void> {
     const session = this.getSessionOrThrow(sessionId, user.orgId);
-    await this.saveRecording(session);
-    await this.destroyContainer(session.containerId);
+    if (session.expireTimer) clearTimeout(session.expireTimer);
+
+    // Guardar primero; si falla, NO borrar la sesión en silencio: se propaga el error
+    // (el usuario sabrá que no se guardó) pero el contenedor sí se limpia.
+    try {
+      await this.saveRecording(session);
+    } finally {
+      await this.destroyContainer(session.containerId);
+    }
     session.status = 'STOPPED';
     this.sessions.delete(sessionId);
   }
@@ -200,22 +217,19 @@ export class RecorderService implements OnModuleDestroy {
     await this.prisma.recording.delete({ where: { id } });
   }
 
+  /** Persiste la grabación. Lanza si falla — el llamador decide cómo reaccionar. */
   private async saveRecording(session: RecorderSession): Promise<void> {
-    try {
-      await this.prisma.recording.create({
-        data: {
-          sessionId: session.sessionId,
-          projectId: session.projectId,
-          orgId: session.orgId,
-          targetUrl: session.targetUrl,
-          steps: session.steps as object[],
-          startedAt: session.startedAt,
-        },
-      });
-      this.logger.log(`Recording saved: ${session.sessionId} (${session.steps.length} steps)`);
-    } catch (err) {
-      this.logger.error(`Failed to save recording: ${err}`);
-    }
+    await this.prisma.recording.create({
+      data: {
+        sessionId: session.sessionId,
+        projectId: session.projectId,
+        orgId: session.orgId,
+        targetUrl: session.targetUrl,
+        steps: session.steps as object[],
+        startedAt: session.startedAt,
+      },
+    });
+    this.logger.log(`Recording saved: ${session.sessionId} (${session.steps.length} steps)`);
   }
 
   private getSessionOrThrow(sessionId: string, orgId: string): RecorderSession {
@@ -230,7 +244,12 @@ export class RecorderService implements OnModuleDestroy {
     const session = this.sessions.get(sessionId);
     if (session?.status === 'ACTIVE') {
       this.logger.warn(`Session ${sessionId} expired`);
-      await this.saveRecording(session);
+      // Best-effort: es un timer en background, no hay a quién propagar el error.
+      try {
+        await this.saveRecording(session);
+      } catch (err) {
+        this.logger.error(`Failed to save expired recording ${sessionId}: ${String(err)}`);
+      }
       await this.destroyContainer(session.containerId).catch(() => null);
       session.status = 'EXPIRED';
       this.sessions.delete(sessionId);
