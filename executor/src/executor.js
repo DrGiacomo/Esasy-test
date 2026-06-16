@@ -83,9 +83,16 @@ async function runStep(page, step) {
       await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
       break;
 
-    case 'assert_text':
+    case 'assert_text': {
       await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
+      const actual = (await page.textContent(selector)) ?? '';
+      if (value != null && value !== '' && !actual.includes(value)) {
+        throw new Error(
+          `assert_text failed: expected "${value}" but got "${actual.trim().slice(0, 200)}"`,
+        );
+      }
       break;
+    }
 
     case 'screenshot': {
       const dir = path.join(ARTIFACTS_DIR, EXECUTION_ID);
@@ -99,7 +106,8 @@ async function runStep(page, step) {
       break;
 
     default:
-      console.warn(`[executor] Unknown action: ${action}`);
+      // Acción no soportada: fallar explícitamente en vez de marcar el paso como PASSED.
+      throw new Error(`Unknown action: ${action}`);
   }
 }
 
@@ -119,16 +127,23 @@ async function runTest(browser, db, redis, row) {
     ? { recordVideo: { dir: path.join(ARTIFACTS_DIR, EXECUTION_ID), size: { width: 1280, height: 720 } } }
     : {};
 
-  const context = await browser.newContext(contextOptions);
-  const page = await context.newPage();
-
-  const stepResults = []; // collect results in-memory, bulk-insert at the end
+  let context;
+  let page;
+  let failedIndex = -1;          // índice del paso que falló (-1 = fallo de setup)
+  const stepResults = [];        // collect results in-memory, bulk-insert at the end
 
   try {
-    for (const step of activeSteps) {
+    // Dentro del try: si newContext/newPage fallan, el test se marca FAILED en vez de
+    // quedar atascado en RUNNING (la excepción ya no escapa de runTest).
+    context = await browser.newContext(contextOptions);
+    page = await context.newPage();
+
+    for (let i = 0; i < activeSteps.length; i++) {
+      const step = activeSteps[i];
       console.log(`[executor]   step [${step.action}] ${step.selector ?? step.value ?? ''}`);
       const stepStart = Date.now();
       failedStepId = step.id;
+      failedIndex = i;
 
       await runStep(page, step);
 
@@ -151,13 +166,22 @@ async function runTest(browser, db, redis, row) {
     if (failedStepId) {
       stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: 0, errorDetails: errorMessage });
     }
+
+    // Los pasos posteriores al fallo (o todos, si falló el setup) se marcan SKIPPED
+    // para que el resultado quede completo y la UI pueda distinguir "saltado" de "fallido".
+    const skipFrom = failedIndex >= 0 ? failedIndex + 1 : 0;
+    for (const step of activeSteps.slice(skipFrom)) {
+      stepResults.push({ stepId: step.id, status: 'SKIPPED', durationMs: 0, errorDetails: null });
+    }
   } finally {
-    if (RECORD_VIDEO) {
+    if (RECORD_VIDEO && page) {
       const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
       const timeout = new Promise(r => setTimeout(r, 15000)); // max 15s to save video
       await Promise.race([page.video()?.saveAs(videoPath).catch(() => null), timeout]);
     }
-    await Promise.race([context.close(), new Promise(r => setTimeout(r, 10000))]);
+    if (context) {
+      await Promise.race([context.close(), new Promise(r => setTimeout(r, 10000))]);
+    }
   }
 
   // Bulk-insert all step results in one query
