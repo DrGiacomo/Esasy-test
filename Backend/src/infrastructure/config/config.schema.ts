@@ -21,4 +21,7 @@ export const configSchema = Joi.object({
   RECORDER_IMAGE: Joi.string().default('e2e-platform/recorder:latest'),
   EXECUTION_IMAGE: Joi.string().default('e2e-platform/executor:latest'),
   ARTIFACTS_VOLUME_PATH: Joi.string().default('/artifacts'),
+  EXECUTION_TIMEOUT_MS: Joi.number().default(600000), // 10 min — máximo por ejecución
+
+  CORS_ORIGIN: Joi.string().default('*'), // origen permitido para WS/HTTP (restringir en prod)
 });
