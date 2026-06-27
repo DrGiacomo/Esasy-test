@@ -18,8 +18,18 @@ export class RecorderController {
 
   @Post('sessions')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  start(@Body() dto: StartRecordingDto, @CurrentUser() user: JwtPayload) {
-    return this.recorderService.start(dto.projectId, dto.targetUrl, user);
+  async start(@Body() dto: StartRecordingDto, @CurrentUser() user: JwtPayload) {
+    const session = await this.recorderService.start(dto.projectId, dto.targetUrl, user);
+    // Proyectar solo campos serializables: la sesión interna lleva `expireTimer`
+    // (un NodeJS.Timeout) que rompe JSON.stringify, y `containerId`/`orgId` no
+    // deben exponerse al cliente.
+    return {
+      sessionId: session.sessionId,
+      projectId: session.projectId,
+      targetUrl: session.targetUrl,
+      status: session.status,
+      startedAt: session.startedAt,
+    };
   }
 
   @Delete('sessions/:sessionId')
