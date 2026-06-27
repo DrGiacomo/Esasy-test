@@ -25,8 +25,20 @@ async function publish(redis, event, payload) {
   );
 }
 
+// Resuelve referencias a secretos `{{NOMBRE}}` contra las variables de entorno
+// inyectadas por el worker. Si el nombre no existe, deja el placeholder intacto.
+// Se aplica solo al ejecutar el paso, nunca al loguearlo, para no filtrar valores.
+function resolveSecrets(input) {
+  if (input == null) return input;
+  return input.replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (match, name) =>
+    Object.prototype.hasOwnProperty.call(process.env, name) ? process.env[name] : match,
+  );
+}
+
 async function runStep(page, step) {
-  const { action, selector, value } = step;
+  const action = step.action;
+  const selector = resolveSecrets(step.selector);
+  const value = resolveSecrets(step.value);
 
   switch (action) {
     case 'navigate':

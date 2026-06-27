@@ -1,9 +1,10 @@
 import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { ExecutionStatus, Prisma } from '@prisma/client';
+import { ExecutionStatus, Prisma, SecretType } from '@prisma/client';
 import { Job } from 'bullmq';
 import { createClient } from 'redis';
 import { PrismaService } from '../../prisma/prisma.service';
+import { VaultService } from '../../infrastructure/vault/vault.service';
 import { ExecutionJobData, EXECUTION_QUEUE } from '../../modules/executions/queues/execution.queue';
 import { DockerService } from './docker.service';
 import { ArtifactCollectorService } from './artifact-collector.service';
@@ -14,6 +15,20 @@ type WaitOutcome = { exitCode: number | null; aborted: 'cancelled' | 'timeout' |
 
 const CANCEL_POLL_MS = 3000;
 
+// Nombres de env que el runtime del executor reserva — un secreto nunca puede pisarlos.
+const RESERVED_ENV = new Set([
+  'EXECUTION_ID',
+  'PROJECT_ID',
+  'ORG_ID',
+  'REDIS_URL',
+  'DATABASE_URL',
+  'RECORD_VIDEO',
+  'MAX_PARALLEL',
+  'PATH',
+  'HOME',
+  'NODE_OPTIONS',
+]);
+
 @Processor(EXECUTION_QUEUE)
 export class ExecutionProcessor extends WorkerHost {
   private readonly logger = new Logger(ExecutionProcessor.name);
@@ -22,6 +37,7 @@ export class ExecutionProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly docker: DockerService,
     private readonly artifacts: ArtifactCollectorService,
+    private readonly vault: VaultService,
   ) {
     super();
   }
@@ -57,6 +73,7 @@ export class ExecutionProcessor extends WorkerHost {
         `ORG_ID=${orgId}`,
         `REDIS_URL=${process.env.CONTAINER_REDIS_URL ?? process.env.REDIS_URL}`,
         `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
+        ...(await this.getSecretEnvVars(orgId, executionId)),
       ];
 
       containerId = await this.docker.runExecutionContainer(executionId, envVars);
@@ -217,6 +234,37 @@ export class ExecutionProcessor extends WorkerHost {
       `execution:${executionId}:events`,
       JSON.stringify({ event, executionId, ...payload, timestamp: Date.now() }),
     );
+  }
+
+  /**
+   * Secretos de tipo ENV_VAR de la organización, descifrados e inyectados como
+   * variables de entorno en el contenedor del executor. Los pasos los referencian
+   * con la sintaxis `{{NOMBRE}}` (resuelta dentro del executor). Nunca se exponen
+   * al frontend ni se registran en logs.
+   */
+  private async getSecretEnvVars(orgId: string, executionId: string): Promise<string[]> {
+    const secrets = await this.prisma.secret.findMany({
+      where: { organizationId: orgId, type: SecretType.ENV_VAR },
+      select: { name: true, encryptedValue: true },
+    });
+
+    const env: string[] = [];
+    for (const s of secrets) {
+      if (RESERVED_ENV.has(s.name)) {
+        this.logger.warn(`Secret "${s.name}" usa un nombre de env reservado — omitido`);
+        continue;
+      }
+      try {
+        env.push(`${s.name}=${this.vault.decrypt(s.encryptedValue)}`);
+      } catch (err) {
+        // No abortar la ejecución por un secreto corrupto; registrar sin filtrar el valor.
+        this.logger.error(`No se pudo descifrar el secreto "${s.name}": ${String(err)}`);
+      }
+    }
+    if (env.length > 0) {
+      this.logger.log(`Inyectando ${env.length} secreto(s) en la ejecución ${executionId}`);
+    }
+    return env;
   }
 
   private timeoutMs(): number {

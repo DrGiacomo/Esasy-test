@@ -14,7 +14,7 @@ import { ROUTES } from '@/router/routes';
 export default function TestDetailPage() {
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
-  const [test, setTest] = useState<(Test & { steps: TestStep[]; suite: { projectId: string } }) | null>(null);
+  const [test, setTest] = useState<(Test & { steps: TestStep[]; suite?: { projectId: string } }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
 
@@ -28,7 +28,7 @@ export default function TestDetailPage() {
     setRunning(true);
     try {
       // Get projectId from suite (included in response), or fetch from suite endpoint as fallback
-      let projectId = (test as unknown as { suite?: { projectId: string } }).suite?.projectId;
+      let projectId = test.suite?.projectId;
       if (!projectId) {
         const suite = await api.get<{ projectId: string }>(`/suites/${test.suiteId}`).then(r => r.data);
         projectId = suite.projectId;
