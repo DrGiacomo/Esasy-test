@@ -14,6 +14,10 @@ export class DeepSeekProvider implements AiProvider {
     this.apiKey = config.get<string>('DEEPSEEK_API_KEY')!;
   }
 
+  supportsImages(): boolean {
+    return false;
+  }
+
   async complete(
     messages: AiMessage[],
     model = 'deepseek-chat',

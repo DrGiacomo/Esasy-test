@@ -8,6 +8,7 @@ import { VaultService } from '../../infrastructure/vault/vault.service';
 import { ExecutionJobData, EXECUTION_QUEUE } from '../../modules/executions/queues/execution.queue';
 import { DockerService } from './docker.service';
 import { ArtifactCollectorService } from './artifact-collector.service';
+import { AutoHealingService } from './auto-healing.service';
 
 type RedisClient = ReturnType<typeof createClient>;
 
@@ -38,6 +39,7 @@ export class ExecutionProcessor extends WorkerHost {
     private readonly docker: DockerService,
     private readonly artifacts: ArtifactCollectorService,
     private readonly vault: VaultService,
+    private readonly autoHealing: AutoHealingService,
   ) {
     super();
   }
@@ -111,6 +113,12 @@ export class ExecutionProcessor extends WorkerHost {
         const urls = this.artifacts.getArtifactUrls(executionId, result.testId);
         await this.prisma.executionResult.update({ where: { id: result.id }, data: urls });
       }
+
+      // Self-healing automático: propone fixes para los steps que fallaron. No bloquea
+      // el cierre de la ejecución ante un error en la IA (best-effort).
+      await this.autoHealing.run(executionId, orgId).catch((e) =>
+        this.logger.error(`Auto-healing falló para ${executionId}: ${String(e)}`),
+      );
 
       if (outcome.aborted === 'timeout') {
         await this.failExecution(publisher, executionId, `Execution timed out after ${this.timeoutMs()}ms`);

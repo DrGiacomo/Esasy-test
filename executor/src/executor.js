@@ -35,6 +35,28 @@ function resolveSecrets(input) {
   );
 }
 
+// Guarda HTML y screenshot del momento del fallo en el volumen de artefactos.
+// El backend (self-healing automático) los lee como `${stepId}_failure.{html,png}`.
+// Devuelve la URL del screenshot, o null si no se pudo capturar.
+async function captureFailureContext(page, stepId) {
+  const dir = path.join(ARTIFACTS_DIR, EXECUTION_ID);
+  fs.mkdirSync(dir, { recursive: true });
+  const withTimeout = (p) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]);
+
+  await withTimeout(
+    page.content().then((html) => fs.writeFileSync(path.join(dir, `${stepId}_failure.html`), html)),
+  ).catch((e) => console.error(`[executor] capture HTML failed: ${e}`));
+
+  let screenshotUrl = null;
+  await withTimeout(
+    page.screenshot({ path: path.join(dir, `${stepId}_failure.png`) }).then(() => {
+      screenshotUrl = `/artifacts/${EXECUTION_ID}/${stepId}_failure.png`;
+    }),
+  ).catch((e) => console.error(`[executor] capture screenshot failed: ${e}`));
+
+  return screenshotUrl;
+}
+
 async function runStep(page, step) {
   const action = step.action;
   const selector = resolveSecrets(step.selector);
@@ -159,7 +181,7 @@ async function runTest(browser, db, redis, row) {
 
       await runStep(page, step);
 
-      stepResults.push({ stepId: step.id, status: 'PASSED', durationMs: Date.now() - stepStart, errorDetails: null });
+      stepResults.push({ stepId: step.id, status: 'PASSED', durationMs: Date.now() - stepStart, errorDetails: null, screenshotUrl: null });
     }
 
     // Final screenshot only when video is off (video already captures everything)
@@ -175,15 +197,24 @@ async function runTest(browser, db, redis, row) {
     errorMessage = String(err);
     console.error(`[executor] Test "${test_name}" FAILED: ${err}`);
 
-    if (failedStepId) {
-      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: 0, errorDetails: errorMessage });
+    // Capturar el contexto del fallo (HTML + screenshot) para alimentar el self-healing
+    // automático del backend. Best-effort y con timeout: nunca debe colgar el test.
+    let failureScreenshotUrl = null;
+    if (page && failedStepId) {
+      failureScreenshotUrl = await captureFailureContext(page, failedStepId).catch(() => null);
     }
+
+    if (failedStepId) {
+      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: 0, errorDetails: errorMessage, screenshotUrl: failureScreenshotUrl });
+    }
+
+    await publish(redis, 'result:step-failed', { testId: test_id, stepId: failedStepId }).catch(() => null);
 
     // Los pasos posteriores al fallo (o todos, si falló el setup) se marcan SKIPPED
     // para que el resultado quede completo y la UI pueda distinguir "saltado" de "fallido".
     const skipFrom = failedIndex >= 0 ? failedIndex + 1 : 0;
     for (const step of activeSteps.slice(skipFrom)) {
-      stepResults.push({ stepId: step.id, status: 'SKIPPED', durationMs: 0, errorDetails: null });
+      stepResults.push({ stepId: step.id, status: 'SKIPPED', durationMs: 0, errorDetails: null, screenshotUrl: null });
     }
   } finally {
     if (RECORD_VIDEO && page) {
@@ -199,13 +230,13 @@ async function runTest(browser, db, redis, row) {
   // Bulk-insert all step results in one query
   if (stepResults.length > 0) {
     const values = stepResults.map((_, i) => {
-      const base = i * 5;
-      return `(gen_random_uuid(), $${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, NOW())`;
+      const base = i * 6;
+      return `(gen_random_uuid(), $${base+1}, $${base+2}, $${base+3}, $${base+4}, $${base+5}, $${base+6}, NOW())`;
     }).join(', ');
 
-    const params = stepResults.flatMap(r => [result_id, r.stepId, r.status, r.durationMs, r.errorDetails]);
+    const params = stepResults.flatMap(r => [result_id, r.stepId, r.status, r.durationMs, r.errorDetails, r.screenshotUrl ?? null]);
     await db.query(
-      `INSERT INTO step_results (id, "executionResultId", "stepId", status, "durationMs", "errorDetails", "createdAt") VALUES ${values}`,
+      `INSERT INTO step_results (id, "executionResultId", "stepId", status, "durationMs", "errorDetails", "screenshotUrl", "createdAt") VALUES ${values}`,
       params,
     ).catch(e => console.error('[executor] step_results insert failed:', e));
   }

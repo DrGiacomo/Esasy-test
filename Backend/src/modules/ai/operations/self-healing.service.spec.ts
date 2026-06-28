@@ -3,7 +3,8 @@ import { HealingStatus } from '@prisma/client';
 import { SelfHealingService } from './self-healing.service';
 
 function buildMocks() {
-  const ai = { complete: jest.fn() };
+  const ai = { complete: jest.fn(), supportsImages: () => false };
+  const vision = { complete: jest.fn(), supportsImages: () => true };
   const prisma = {
     testStep: { findFirst: jest.fn(), update: jest.fn() },
     selectorHealingLog: {
@@ -14,8 +15,15 @@ function buildMocks() {
     },
   };
   const audit = { log: jest.fn().mockResolvedValue(undefined) };
-  const service = new SelfHealingService(ai as never, prisma as never, audit as never);
-  return { ai, prisma, audit, service };
+  const config = { get: jest.fn((_key: string, def?: unknown) => def) };
+  const service = new SelfHealingService(
+    ai as never,
+    prisma as never,
+    audit as never,
+    vision as never,
+    config as never,
+  );
+  return { ai, vision, prisma, audit, config, service };
 }
 
 const goodProposal = JSON.stringify({
@@ -79,6 +87,76 @@ describe('SelfHealingService.propose — multi-tenant', () => {
       BadRequestException,
     );
     expect(prisma.selectorHealingLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('SelfHealingService.proposeAutomatic', () => {
+  const params = (over = {}) => ({
+    stepId: 'step-1',
+    pageHtml: '<html/>',
+    userId: 'user-1',
+    orgId: 'org-1',
+    ...over,
+  });
+
+  it('no crea propuesta si el step no existe o no tiene selector', async () => {
+    const { ai, prisma, service } = buildMocks();
+    prisma.testStep.findFirst.mockResolvedValue(null);
+    expect(await service.proposeAutomatic(params())).toBeNull();
+
+    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: null, testId: 't1' });
+    expect(await service.proposeAutomatic(params())).toBeNull();
+    expect(ai.complete).not.toHaveBeenCalled();
+  });
+
+  it('deduplica: si ya hay una propuesta PENDING no llama a la IA', async () => {
+    const { ai, prisma, service } = buildMocks();
+    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.selectorHealingLog.findFirst.mockResolvedValue({ id: 'log-existing' });
+
+    const res = await service.proposeAutomatic(params());
+
+    expect(res).toEqual({ id: 'log-existing' });
+    expect(ai.complete).not.toHaveBeenCalled();
+  });
+
+  it('descarta propuestas por debajo del umbral de confianza', async () => {
+    const { ai, prisma, config, service } = buildMocks();
+    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
+    config.get.mockImplementation((k: string, def?: unknown) => (k === 'SELF_HEALING_MIN_CONFIDENCE' ? 0.8 : def));
+    ai.complete.mockResolvedValue({ content: JSON.stringify({ selector: '#x', confidence: 0.5 }) });
+
+    const res = await service.proposeAutomatic(params());
+
+    expect(res).toBeNull();
+    expect(prisma.selectorHealingLog.create).not.toHaveBeenCalled();
+  });
+
+  it('usa el proveedor de visión y adjunta el screenshot cuando hay imagen', async () => {
+    const { vision, prisma, config, service } = buildMocks();
+    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1', confidenceScore: 0.3 });
+    prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
+    prisma.selectorHealingLog.create.mockResolvedValue({ id: 'log-new' });
+    config.get.mockImplementation((_k: string, def?: unknown) => def);
+    vision.complete.mockResolvedValue({ content: JSON.stringify({ selector: '#good', confidence: 0.9, reasoning: 'r' }) });
+
+    const res = await service.proposeAutomatic(params({ screenshot: 'data:image/png;base64,AAA' }));
+
+    expect(res).toEqual({ id: 'log-new' });
+    const [messages] = vision.complete.mock.calls[0];
+    expect(messages[messages.length - 1].images).toEqual(['data:image/png;base64,AAA']);
+    expect(prisma.selectorHealingLog.create).toHaveBeenCalled();
+  });
+
+  it('nunca lanza: si la IA falla devuelve null', async () => {
+    const { ai, prisma, config, service } = buildMocks();
+    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
+    config.get.mockImplementation((_k: string, def?: unknown) => def);
+    ai.complete.mockRejectedValue(new Error('boom'));
+
+    await expect(service.proposeAutomatic(params())).resolves.toBeNull();
   });
 });
 

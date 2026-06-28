@@ -163,27 +163,28 @@ export class RecorderService implements OnModuleDestroy {
   }
 
   private toTestStep(step: CapturedStep): MappedStep {
+    const stype = step.selectorType ?? 'css';
     switch (step.type) {
       case 'navigate':
         return { action: 'navigate', value: step.url, description: `Navegar a ${step.url}` };
       case 'click':
         return step.selector
-          ? { action: 'click', selector: step.selector, selectorType: 'css', description: `Click en ${step.selector}` }
+          ? { action: 'click', selector: step.selector, selectorType: stype, description: `Click en ${step.selector}` }
           : { action: 'click', value: JSON.stringify({ x: step.x, y: step.y }), description: `Click en (${step.x}, ${step.y})` };
       case 'dblclick':
         return step.selector
-          ? { action: 'dblclick', selector: step.selector, selectorType: 'css', description: `Doble click en ${step.selector}` }
+          ? { action: 'dblclick', selector: step.selector, selectorType: stype, description: `Doble click en ${step.selector}` }
           : { action: 'dblclick', value: JSON.stringify({ x: step.x, y: step.y }), description: `Doble click en (${step.x}, ${step.y})` };
       case 'fill':
-        return { action: 'fill', selector: step.selector, selectorType: 'css', value: step.value, description: `Escribir "${step.value}"` };
+        return { action: 'fill', selector: step.selector, selectorType: stype, value: step.value, description: `Escribir "${step.value}"` };
       case 'type':
         return { action: 'fill', value: step.value, description: `Teclear "${step.value}"` };
       case 'press':
         return { action: 'press', value: step.key, description: `Presionar ${step.key}` };
       case 'select':
-        return { action: 'select', selector: step.selector, selectorType: 'css', value: step.value, description: `Seleccionar "${step.value}"` };
+        return { action: 'select', selector: step.selector, selectorType: stype, value: step.value, description: `Seleccionar "${step.value}"` };
       case 'hover':
-        return { action: 'hover', selector: step.selector, selectorType: 'css', description: `Hover en ${step.selector}` };
+        return { action: 'hover', selector: step.selector, selectorType: stype, description: `Hover en ${step.selector}` };
       default:
         return { action: step.type, description: step.type };
     }

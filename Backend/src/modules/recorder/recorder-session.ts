@@ -1,6 +1,8 @@
 export interface CapturedStep {
   type: string;
   selector?: string;
+  /** Estrategia del selector computado por el recorder: css | testId | role | text | xpath */
+  selectorType?: string;
   value?: string;
   url?: string;
   key?: string;

@@ -1,8 +1,11 @@
-import { SecretType } from '@prisma/client';
+import { ExecutionStatus, SecretType } from '@prisma/client';
 import { ExecutionProcessor } from './execution.processor';
+
+type WaitOutcome = { exitCode: number | null; aborted: 'cancelled' | 'timeout' | null };
 
 type ProcessorInternals = {
   getSecretEnvVars(orgId: string, executionId: string): Promise<string[]>;
+  waitForContainerOrAbort(containerId: string, executionId: string): Promise<WaitOutcome>;
 };
 
 function buildProcessor() {
@@ -17,6 +20,7 @@ function buildProcessor() {
     {} as never, // docker — no usado por getSecretEnvVars
     {} as never, // artifacts — idem
     vault as never,
+    {} as never, // autoHealing — idem
   );
   return { prisma, vault, processor: processor as unknown as ProcessorInternals };
 }
@@ -72,5 +76,62 @@ describe('ExecutionProcessor — inyección de secretos', () => {
     prisma.secret.findMany.mockResolvedValue([]);
 
     expect(await processor.getSecretEnvVars('org-1', 'exec-1')).toEqual([]);
+  });
+});
+
+describe('ExecutionProcessor — ciclo de vida y cancelación del contenedor', () => {
+  const NEVER = new Promise<{ exitCode: number }>(() => {}); // contenedor que no termina
+
+  function buildLifecycle() {
+    const prisma = { execution: { findUnique: jest.fn() } };
+    const docker = { waitForContainer: jest.fn() };
+    const processor = new ExecutionProcessor(
+      prisma as never,
+      docker as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    return { prisma, docker, processor: processor as unknown as ProcessorInternals };
+  }
+
+  afterEach(() => {
+    jest.useRealTimers();
+    delete process.env.EXECUTION_TIMEOUT_MS;
+  });
+
+  it('devuelve el exitCode cuando el contenedor termina normalmente', async () => {
+    const { docker, processor } = buildLifecycle();
+    docker.waitForContainer.mockResolvedValue({ exitCode: 0 });
+
+    await expect(processor.waitForContainerOrAbort('c1', 'exec-1')).resolves.toEqual({
+      exitCode: 0,
+      aborted: null,
+    });
+  });
+
+  it('aborta como "cancelled" cuando la ejecución pasa a CANCELLED en BD', async () => {
+    jest.useFakeTimers();
+    const { prisma, docker, processor } = buildLifecycle();
+    docker.waitForContainer.mockReturnValue(NEVER);
+    prisma.execution.findUnique.mockResolvedValue({ status: ExecutionStatus.CANCELLED });
+
+    const p = processor.waitForContainerOrAbort('c1', 'exec-1');
+    await jest.advanceTimersByTimeAsync(3000); // primer poll de cancelación
+
+    await expect(p).resolves.toEqual({ exitCode: null, aborted: 'cancelled' });
+  });
+
+  it('aborta como "timeout" al superar EXECUTION_TIMEOUT_MS', async () => {
+    jest.useFakeTimers();
+    process.env.EXECUTION_TIMEOUT_MS = '100';
+    const { prisma, docker, processor } = buildLifecycle();
+    docker.waitForContainer.mockReturnValue(NEVER);
+    prisma.execution.findUnique.mockResolvedValue({ status: ExecutionStatus.RUNNING });
+
+    const p = processor.waitForContainerOrAbort('c1', 'exec-1');
+    await jest.advanceTimersByTimeAsync(150);
+
+    await expect(p).resolves.toEqual({ exitCode: null, aborted: 'timeout' });
   });
 });
