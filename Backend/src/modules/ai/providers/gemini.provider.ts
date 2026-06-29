@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { AiCompleteOptions, AiMessage, AiProvider, AiResponse } from './ai-provider.interface';
+import { isRetryableHttpError, withRetry } from '../util/retry';
 
 interface GeminiPart {
   text?: string;
@@ -67,14 +68,14 @@ export class GeminiProvider implements AiProvider {
 
     let response;
     try {
-      response = await axios.post(
-        `${this.baseUrl}/v1beta/models/${model}:generateContent`,
-        body,
-        {
-          params: { key: this.apiKey },
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 45000,
-        },
+      response = await withRetry(
+        () =>
+          axios.post(`${this.baseUrl}/v1beta/models/${model}:generateContent`, body, {
+            params: { key: this.apiKey },
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 45000,
+          }),
+        isRetryableHttpError,
       );
     } catch (err) {
       this.logger.error(`Gemini request failed: ${String(err)}`);

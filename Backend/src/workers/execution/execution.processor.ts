@@ -69,12 +69,20 @@ export class ExecutionProcessor extends WorkerHost {
         data: tests.map((t) => ({ executionId, testId: t.id, status: ExecutionStatus.RUNNING })),
       });
 
+      // Config por proyecto: paralelismo y grabación de video (control de coste).
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { maxParallel: true, recordVideo: true },
+      });
+
       const envVars = [
         `EXECUTION_ID=${executionId}`,
         `PROJECT_ID=${projectId}`,
         `ORG_ID=${orgId}`,
         `REDIS_URL=${process.env.CONTAINER_REDIS_URL ?? process.env.REDIS_URL}`,
         `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
+        `RECORD_VIDEO=${project?.recordVideo === false ? 'false' : 'true'}`,
+        ...(project?.maxParallel != null ? [`MAX_PARALLEL=${project.maxParallel}`] : []),
         ...(await this.getSecretEnvVars(orgId, executionId)),
       ];
 

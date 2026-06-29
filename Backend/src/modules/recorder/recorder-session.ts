@@ -21,4 +21,6 @@ export interface RecorderSession {
   steps: CapturedStep[];
   /** Handle del auto-expire (30 min); se cancela al hacer stop() para no retener la sesión. */
   expireTimer?: NodeJS.Timeout;
+  /** Flush periódico de los pasos a BD para no perder la grabación si el backend cae. */
+  flushTimer?: NodeJS.Timeout;
 }

@@ -21,7 +21,7 @@ export class CodegenService {
     });
     if (!test) throw new NotFoundException('Test not found');
 
-    const messages = buildCodegenPrompt(test.name, test.semanticModel);
+    const messages = buildCodegenPrompt(test.name, test.flowModel);
 
     let result;
     try {

@@ -29,7 +29,7 @@ export class TestsService {
         suiteId,
         name: dto.name,
         description: dto.description,
-        semanticModel: [],
+        flowModel: [],
       },
       include: { steps: { orderBy: { order: 'asc' } } },
     });
@@ -52,10 +52,10 @@ export class TestsService {
     return test;
   }
 
-  async update(id: string, dto: Partial<CreateTestDto & { semanticModel: unknown; generatedCode: string; status: TestStatus }>, user: JwtPayload): Promise<TestResponseDto> {
+  async update(id: string, dto: Partial<CreateTestDto & { flowModel: unknown; generatedCode: string; status: TestStatus }>, user: JwtPayload): Promise<TestResponseDto> {
     const test = await this.findById(id, user);
 
-    const hasSignificantChange = dto.semanticModel !== undefined || dto.generatedCode !== undefined;
+    const hasSignificantChange = dto.flowModel !== undefined || dto.generatedCode !== undefined;
 
     return this.prisma.$transaction(async (tx) => {
       if (hasSignificantChange) {

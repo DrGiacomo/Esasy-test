@@ -39,6 +39,8 @@ export interface Project {
   baseUrl: string;
   organizationId: string;
   isArchived: boolean;
+  maxParallel: number | null;
+  recordVideo: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,7 +73,7 @@ export interface Test {
   description: string | null;
   suiteId: string;
   status: TestStatus;
-  semanticModel: unknown;
+  flowModel: unknown;
   generatedCode: string | null;
   currentVersion: number;
   isArchived: boolean;

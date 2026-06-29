@@ -5,7 +5,7 @@
 > **Fuentes:** `audit-2026-06-15.md` (bugs), `perfeccionar-2026-06-15.md` (mejoras) y notas de proyecto.
 > **Estado del producto:** flujo core (grabar → convertir → ejecutar → ver con video) **funcional**. Lo de abajo es robustez, infra y features incompletas.
 >
-> **Avance estimado:** MVP funcional ~90% · Producto grado producción ~85% (2026-06-28: cerrados TODOS los pendientes de prioridad alta 🟠 — self-healing automático, Gemini multimodal, calidad de selectores, retención de artefactos, git sync real y cobertura de tests worker/recorder/frontend).
+> **Avance estimado:** MVP funcional ~95% · Producto grado producción ~90% (2026-06-28: cerrados TODOS los pendientes 🔴🟠🟡🟢 del roadmap. Solo queda deuda operativa: el lint no es gate de CI por un desajuste pre-existente CRLF/prettier en todo el repo — requeriría un reformat global).
 
 ---
 
@@ -32,23 +32,23 @@
 
 | # | Pendiente | Prioridad | Estado | Notas |
 |---|---|---|---|---|
-| 2.1 | **Recogida de artefactos coherente** — `artifact-collector.service.ts:19` busca `${testId}_final.png` que solo existe con `RECORD_VIDEO=false` → con video, `screenshotUrl` siempre null | 🟡 | ABIERTO | Unificar screenshot + video. |
-| 2.2 | **`MAX_PARALLEL` / `RECORD_VIDEO` por proyecto** — `execution.processor.ts:48-54` no propaga estas vars; el executor usa defaults fijos | 🟡 | ABIERTO | Control de coste/paralelismo por proyecto. |
+| 2.1 | **Recogida de artefactos coherente** — `screenshotUrl` null con video | 🟡 | **HECHO (2026-06-28)** | El executor escribe SIEMPRE `${testId}_final.png` (en el `finally`, con y sin video); el `artifact-collector` ya lo encuentra. |
+| 2.2 | **`MAX_PARALLEL` / `RECORD_VIDEO` por proyecto** | 🟡 | **HECHO (2026-06-28)** | Columnas `Project.maxParallel`/`recordVideo` (+ migración + DTOs); el worker las propaga al contenedor como env. Control de coste/paralelismo por proyecto. |
 
 ## 3. Grabación y conversión
 
 | # | Pendiente | Prioridad | Estado | Notas |
 |---|---|---|---|---|
 | 3.1 | **Mejor calidad de selectores** — priorizar `data-testid`/aria/texto | 🟠 | **HECHO (2026-06-28)** | `recorder.js`: `buildSelectorInPage` computa selectores robustos (data-testid > id estable > aria-label > [name] > texto > css acotado) en clicks por coordenadas y refina los CSS crudos. `selectorType` fluye hasta el `TestStep`. |
-| 3.2 | **Persistir grabación incrementalmente** — `recorder.service.ts:87-92` acumula en memoria; si el backend cae antes de `stop()` se pierde todo | 🟡 | ABIERTO | Flush periódico a BD. |
+| 3.2 | **Persistir grabación incrementalmente** | 🟡 | **HECHO (2026-06-28)** | `recorder.service` hace flush cada 10s vía `upsert` por `sessionId`; el guardado final fija `stoppedAt`. Si el backend cae antes de `stop()`, se recupera lo último persistido. |
 
 ## 4. IA y self-healing
 
 | # | Pendiente | Prioridad | Estado | Notas |
 |---|---|---|---|---|
 | 4.1 | **Self-healing automático** — capturar contexto del fallo y disparar healing | 🟠 | **HECHO (2026-06-28)** | El executor guarda `${stepId}_failure.{html,png}` al fallar; el worker (`AutoHealingService`) los lee tras la ejecución y crea propuestas `PENDING_APPROVAL` vía `SelfHealingService.proposeAutomatic` (gateado por `AUTO_HEALING_ENABLED`). Humano sigue en el bucle. ⚠️ Reconstruir imagen del executor. |
-| 4.2 | **Reintentos/backoff en el provider** — `deepseek.provider.ts` hace un POST único; un 429/5xx tumba la operación | 🟡 | ABIERTO | Backoff exponencial (axios ya está). |
-| 4.3 | **Umbral de confianza en self-healing** | 🟡 | **PARCIAL (2026-06-28)** | El path automático descarta propuestas por debajo de `SELF_HEALING_MIN_CONFIDENCE` (def 0.5) y deduplica. El path manual sigue creando sin filtrar. |
+| 4.2 | **Reintentos/backoff en el provider** | 🟡 | **HECHO (2026-06-28)** | `util/retry.ts` (`withRetry` + `isRetryableHttpError`): backoff exponencial con jitter ante 429/5xx/timeout, aplicado en DeepSeek y Gemini. |
+| 4.3 | **Umbral de confianza en self-healing** | 🟡 | **HECHO (2026-06-28)** | El path automático descarta propuestas por debajo de `SELF_HEALING_MIN_CONFIDENCE` (def 0.5) y deduplica. El manual es a petición del usuario y la UI muestra `confidenceAfter` (`HealingProposalCard`). |
 | 4.4 | **Proveedor Gemini multimodal** — imágenes para diagnóstico + potenciar self-healing. Convive con DeepSeek (texto) | 🟠 | **HECHO (2026-06-28)** | `GeminiProvider` (multimodal) cableado bajo `VISION_PROVIDER` (recae en DeepSeek si no hay `GEMINI_API_KEY`). `AiMessage.images` + `self-healing` adjunta el screenshot del fallo. Video: fase 2. |
 
 ## 5. Features de producto a medio cablear
@@ -62,21 +62,22 @@
 
 | # | Pendiente | Prioridad | Estado | Notas |
 |---|---|---|---|---|
-| 6.1 | **Renombrar `semanticModel`** | 🟢 | ABIERTO | Requiere migración Prisma, bajo valor. |
+| 6.1 | **Renombrar `semanticModel` → `flowModel`** | 🟢 | **HECHO (2026-06-28)** | Migración `RENAME COLUMN` (preserva datos) + refs en backend y frontend. Alinea con el dominio "flow" del editor. |
 
 ---
 
-## Orden recomendado de ataque
+## Estado
 
-> **2026-06-28:** cerrados los 2 críticos 🔴 (5.1, 1.1) y TODOS los altos 🟠 (1.2–1.5, 3.1, 4.1, 4.4, 5.2).
-> Lo que queda es 🟡 medio / 🟢 bajo:
+> **2026-06-28:** roadmap completo — cerrados 🔴 (5.1, 1.1), 🟠 (1.2–1.5, 3.1, 4.1, 4.4, 5.2) y 🟡/🟢 (2.1, 2.2, 3.2, 4.2, 4.3, 6.1).
 
-1. **Recogida de artefactos coherente (2.1)** — `screenshotUrl` null cuando hay video.
-2. **`MAX_PARALLEL`/`RECORD_VIDEO` por proyecto (2.2)** — control de coste/paralelismo.
-3. **Reintentos/backoff en el provider IA (4.2)** y **umbral de confianza en path manual (4.3)**.
-4. **Persistir grabación incrementalmente (3.2)** — no perder todo si el backend cae.
-5. **Renombrar `semanticModel` (6.1)** — cosmético, requiere migración.
+### Deuda operativa / despliegue
+1. ⚠️ **Reconstruir imágenes** del **executor** y **recorder** (`docker compose --profile build-images build`):
+   aplican captura de fallos, screenshot final siempre, selectores robustos y env por proyecto.
+2. ⚠️ **Aplicar la migración** `20260629015443_medium_low_roadmap` en cada entorno (`npx prisma migrate deploy`)
+   — incluye el `RENAME COLUMN semanticModel → flowModel` (preserva datos) y las columnas por proyecto.
+3. **Lint no es gate de CI** — hay ~444 errores `prettier/prettier` pre-existentes (CRLF vs LF) en todo el repo.
+   Para activarlo haría falta un reformat global (`prettier --write` + `.gitattributes` con `* text=auto eol=lf`).
 
-> ⚠️ **Acción de despliegue pendiente:** reconstruir las imágenes del **executor** y **recorder**
-> (`docker compose --profile build-images build`) para que tomen la captura de fallos y los
-> selectores robustos nuevos.
+### Mejoras futuras (no bloqueantes, fuera del roadmap original)
+- Self-healing con video (no solo screenshot) — fase 2 de la visión multimodal.
+- Documentación automática de tests (`documentation.service`) y métricas de coste IA.

@@ -8,7 +8,7 @@ export class TestVersionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Llamado antes de cualquier modificación significativa al test.
-  // Captura un snapshot inmutable de {semanticModel, steps, generatedCode}.
+  // Captura un snapshot inmutable de {flowModel, steps, generatedCode}.
   async snapshot(
     testId: string,
     tx?: Prisma.TransactionClient,
@@ -31,7 +31,7 @@ export class TestVersionsService {
         createdByAi: options?.createdByAi ?? false,
         changelog: options?.changelog,
         snapshotData: {
-          semanticModel: test.semanticModel,
+          flowModel: test.flowModel,
           generatedCode: test.generatedCode,
           steps: test.steps,
         } as unknown as Prisma.JsonObject,

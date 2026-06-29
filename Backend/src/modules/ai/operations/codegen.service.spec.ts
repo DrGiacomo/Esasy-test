@@ -25,7 +25,7 @@ describe('CodegenService — multi-tenant', () => {
 
   it('generates and persists code for an owned test', async () => {
     const { ai, prisma, service } = buildMocks();
-    prisma.test.findFirst.mockResolvedValue({ id: 'test-1', name: 'Login', semanticModel: {}, steps: [] });
+    prisma.test.findFirst.mockResolvedValue({ id: 'test-1', name: 'Login', flowModel: {}, steps: [] });
     ai.complete.mockResolvedValue({ content: 'await page.goto("/")' });
 
     const code = await service.generate('test-1', 'user-1', 'org-1');

@@ -19,7 +19,7 @@ export class TestResponseDto {
   name: string;
   description: string | null;
   status: TestStatus;
-  semanticModel: unknown;
+  flowModel: unknown;
   generatedCode: string | null;
   currentVersion: number;
   createdAt: Date;

@@ -2,6 +2,7 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { AiCompleteOptions, AiMessage, AiProvider, AiResponse } from './ai-provider.interface';
+import { isRetryableHttpError, withRetry } from '../util/retry';
 
 @Injectable()
 export class DeepSeekProvider implements AiProvider {
@@ -32,13 +33,18 @@ export class DeepSeekProvider implements AiProvider {
 
     let response;
     try {
-      response = await axios.post(`${this.baseUrl}/v1/chat/completions`, body, {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      });
+      // Reintentos con backoff ante 429/5xx/timeout — un pico transitorio no debe tumbar la operación.
+      response = await withRetry(
+        () =>
+          axios.post(`${this.baseUrl}/v1/chat/completions`, body, {
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+          }),
+        isRetryableHttpError,
+      );
     } catch (err) {
       this.logger.error(`DeepSeek request failed: ${String(err)}`);
       throw new ServiceUnavailableException('AI provider request failed');

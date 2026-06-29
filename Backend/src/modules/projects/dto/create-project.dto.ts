@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
@@ -13,4 +13,14 @@ export class CreateProjectDto {
 
   @IsUrl()
   baseUrl: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  maxParallel?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  recordVideo?: boolean;
 }

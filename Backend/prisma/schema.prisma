@@ -171,6 +171,8 @@ model Project {
   description    String?
   baseUrl        String   // URL de la aplicación bajo prueba
   isArchived     Boolean  @default(false)
+  maxParallel    Int?     // Override de paralelismo del executor (null = default del worker)
+  recordVideo    Boolean  @default(true) // Grabar video en las ejecuciones de este proyecto
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -211,7 +213,7 @@ model Test {
   name           String
   description    String?
   status         TestStatus @default(DRAFT)
-  semanticModel  Json       // Semantic Model: [{action, target, value, assertion}]
+  flowModel      Json       // Modelo del flujo (antes "semanticModel"): [{action, target, value, assertion}]
   generatedCode  String?    // TypeScript POM generado por el AI Engine
   currentVersion Int        @default(1) // Apunta a TestVersion.versionNumber activo
   createdAt      DateTime   @default(now())

@@ -184,12 +184,6 @@ async function runTest(browser, db, redis, row) {
       stepResults.push({ stepId: step.id, status: 'PASSED', durationMs: Date.now() - stepStart, errorDetails: null, screenshotUrl: null });
     }
 
-    // Final screenshot only when video is off (video already captures everything)
-    if (!RECORD_VIDEO) {
-      const screenshotPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}_final.png`);
-      await page.screenshot({ path: screenshotPath });
-    }
-
     console.log(`[executor] Test "${test_name}" PASSED`);
 
   } catch (err) {
@@ -217,6 +211,15 @@ async function runTest(browser, db, redis, row) {
       stepResults.push({ stepId: step.id, status: 'SKIPPED', durationMs: 0, errorDetails: null, screenshotUrl: null });
     }
   } finally {
+    // Screenshot final SIEMPRE (con o sin video): el artifact-collector lo expone como
+    // screenshotUrl del ExecutionResult. Antes solo se generaba sin video → screenshotUrl null.
+    if (page) {
+      const finalPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}_final.png`);
+      await Promise.race([
+        page.screenshot({ path: finalPath }).catch(() => null),
+        new Promise(r => setTimeout(r, 8000)),
+      ]);
+    }
     if (RECORD_VIDEO && page) {
       const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
       const timeout = new Promise(r => setTimeout(r, 15000)); // max 15s to save video

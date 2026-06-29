@@ -79,6 +79,9 @@ export class RecorderService implements OnModuleDestroy {
     };
 
     session.expireTimer = setTimeout(() => void this.expire(sessionId), 30 * 60 * 1000);
+    // Persistencia incremental: vuelca los pasos cada 10s. Si el backend cae antes de
+    // stop(), la grabación no se pierde (se recupera lo último persistido).
+    session.flushTimer = setInterval(() => void this.flush(sessionId), 10 * 1000);
 
     this.sessions.set(sessionId, session);
     this.logger.log(`Recorder session started: ${sessionId}`);
@@ -89,6 +92,7 @@ export class RecorderService implements OnModuleDestroy {
   async stop(sessionId: string, user: JwtPayload): Promise<void> {
     const session = this.getSessionOrThrow(sessionId, user.orgId);
     if (session.expireTimer) clearTimeout(session.expireTimer);
+    if (session.flushTimer) clearInterval(session.flushTimer);
 
     // Guardar primero; si falla, NO borrar la sesión en silencio: se propaga el error
     // (el usuario sabrá que no se guardó) pero el contenedor sí se limpia.
@@ -130,7 +134,7 @@ export class RecorderService implements OnModuleDestroy {
           suiteId,
           name: testName,
           description: `Generado desde grabación de ${rec.targetUrl}`,
-          semanticModel: mappedSteps as unknown as import('@prisma/client').Prisma.InputJsonValue,
+          flowModel: mappedSteps as unknown as import('@prisma/client').Prisma.InputJsonValue,
         },
       });
 
@@ -218,19 +222,42 @@ export class RecorderService implements OnModuleDestroy {
     await this.prisma.recording.delete({ where: { id } });
   }
 
-  /** Persiste la grabación. Lanza si falla — el llamador decide cómo reaccionar. */
+  /** Guardado final de la grabación. Lanza si falla — el llamador decide cómo reaccionar. */
   private async saveRecording(session: RecorderSession): Promise<void> {
-    await this.prisma.recording.create({
-      data: {
+    await this.persist(session, true);
+    this.logger.log(`Recording saved: ${session.sessionId} (${session.steps.length} steps)`);
+  }
+
+  /** Flush periódico best-effort: persiste el progreso sin marcar la grabación como finalizada. */
+  private async flush(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.status !== 'ACTIVE' || session.steps.length === 0) return;
+    try {
+      await this.persist(session, false);
+    } catch (err) {
+      this.logger.warn(`Flush de la grabación ${sessionId} falló: ${String(err)}`);
+    }
+  }
+
+  /**
+   * Upsert idempotente por sessionId — convive con los flushes incrementales. Solo el
+   * guardado final (`finalize=true`) fija `stoppedAt`.
+   */
+  private async persist(session: RecorderSession, finalize: boolean): Promise<void> {
+    const steps = session.steps as object[];
+    await this.prisma.recording.upsert({
+      where: { sessionId: session.sessionId },
+      update: { steps, ...(finalize ? { stoppedAt: new Date() } : {}) },
+      create: {
         sessionId: session.sessionId,
         projectId: session.projectId,
         orgId: session.orgId,
         targetUrl: session.targetUrl,
-        steps: session.steps as object[],
+        steps,
         startedAt: session.startedAt,
+        ...(finalize ? { stoppedAt: new Date() } : {}),
       },
     });
-    this.logger.log(`Recording saved: ${session.sessionId} (${session.steps.length} steps)`);
   }
 
   private getSessionOrThrow(sessionId: string, orgId: string): RecorderSession {
@@ -244,6 +271,7 @@ export class RecorderService implements OnModuleDestroy {
   private async expire(sessionId: string): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session?.status === 'ACTIVE') {
+      if (session.flushTimer) clearInterval(session.flushTimer);
       this.logger.warn(`Session ${sessionId} expired`);
       // Best-effort: es un timer en background, no hay a quién propagar el error.
       try {
@@ -265,6 +293,8 @@ export class RecorderService implements OnModuleDestroy {
 
   async onModuleDestroy(): Promise<void> {
     for (const session of this.sessions.values()) {
+      if (session.expireTimer) clearTimeout(session.expireTimer);
+      if (session.flushTimer) clearInterval(session.flushTimer);
       await this.destroyContainer(session.containerId).catch(() => null);
     }
   }

@@ -1,6 +1,6 @@
 import { AiMessage } from '../providers/ai-provider.interface';
 
-export function buildCodegenPrompt(testName: string, semanticModel: unknown): AiMessage[] {
+export function buildCodegenPrompt(testName: string, flowModel: unknown): AiMessage[] {
   return [
     {
       role: 'system',
@@ -17,7 +17,7 @@ Follow these rules:
     {
       role: 'user',
       content: `Test name: "${testName}"
-Semantic model: ${JSON.stringify(semanticModel, null, 2)}
+Flow model: ${JSON.stringify(flowModel, null, 2)}
 
 Generate the TypeScript POM code:`,
     },
