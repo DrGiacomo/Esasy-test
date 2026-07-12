@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { TestStatus } from '@prisma/client';
+import { Prisma, TestStatus } from '@prisma/client';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTestDto } from './dto/create-test.dto';
+import { UpdateTestDto } from './dto/update-test.dto';
 import { TestResponseDto } from './dto/test-response.dto';
 import { TestVersionsService } from './test-versions.service';
 
@@ -52,10 +53,20 @@ export class TestsService {
     return test;
   }
 
-  async update(id: string, dto: Partial<CreateTestDto & { flowModel: unknown; generatedCode: string; status: TestStatus }>, user: JwtPayload): Promise<TestResponseDto> {
+  async update(id: string, dto: UpdateTestDto, user: JwtPayload): Promise<TestResponseDto> {
     const test = await this.findById(id, user);
 
     const hasSignificantChange = dto.flowModel !== undefined || dto.generatedCode !== undefined;
+
+    // Mapeo explícito campo a campo: nunca pasar el body crudo a Prisma
+    // (un `suiteId` inyectado movería el test a una suite de otra org).
+    const data: Prisma.TestUpdateInput = {
+      ...(dto.name !== undefined ? { name: dto.name } : {}),
+      ...(dto.description !== undefined ? { description: dto.description } : {}),
+      ...(dto.flowModel !== undefined ? { flowModel: dto.flowModel as Prisma.InputJsonValue } : {}),
+      ...(dto.generatedCode !== undefined ? { generatedCode: dto.generatedCode } : {}),
+      ...(dto.status !== undefined ? { status: dto.status } : {}),
+    };
 
     return this.prisma.$transaction(async (tx) => {
       if (hasSignificantChange) {
@@ -63,7 +74,7 @@ export class TestsService {
       }
       return tx.test.update({
         where: { id },
-        data: dto as object,
+        data,
         include: { steps: { orderBy: { order: 'asc' } } },
       });
     });

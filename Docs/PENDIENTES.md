@@ -69,6 +69,11 @@
 ## Estado
 
 > **2026-06-28:** roadmap completo — cerrados 🔴 (5.1, 1.1), 🟠 (1.2–1.5, 3.1, 4.1, 4.4, 5.2) y 🟡/🟢 (2.1, 2.2, 3.2, 4.2, 4.3, 6.1).
+>
+> **2026-07-12:** segunda auditoría (`audit-2026-07-12.md`): 24 hallazgos nuevos (5🔴 4🟠* 7🟡 7🟢).
+> Los **5 críticos quedaron resueltos el mismo día** (artefactos autenticados, DTOs estrictos en
+> updateTest/updateStep, reorder con ownership, versiones con filtro de org). Quedan abiertos los
+> ALTO/MEDIO/BAJO — ver ese documento. (*El 🟠 de `assert` ya estaba señalado en test/05-hallazgos.md #4.)
 
 ### Deuda operativa / despliegue
 1. ⚠️ **Reconstruir imágenes** del **executor** y **recorder** (`docker compose --profile build-images build`):

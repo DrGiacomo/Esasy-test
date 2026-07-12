@@ -9,6 +9,8 @@ import { RoleGuard } from '../../common/guards/role.guard';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { CreateStepDto } from './dto/create-step.dto';
 import { CreateTestDto } from './dto/create-test.dto';
+import { UpdateStepDto } from './dto/update-step.dto';
+import { UpdateTestDto } from './dto/update-test.dto';
 import { ReorderStepsDto } from './dto/reorder-steps.dto';
 import { StepResponseDto, TestResponseDto, TestVersionResponseDto } from './dto/test-response.dto';
 import { TestStepsService } from './test-steps.service';
@@ -64,7 +66,7 @@ export class TestsController {
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
   updateTest(
     @Param('id') id: string,
-    @Body() dto: object,
+    @Body() dto: UpdateTestDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<TestResponseDto> {
     return this.testsService.update(id, dto, user);
@@ -97,7 +99,7 @@ export class TestsController {
   updateStep(
     @Param('testId') testId: string,
     @Param('stepId') stepId: string,
-    @Body() dto: Partial<CreateStepDto>,
+    @Body() dto: UpdateStepDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<StepResponseDto> {
     return this.stepsService.update(testId, stepId, dto, user);
@@ -129,15 +131,17 @@ export class TestsController {
   @Get('tests/:testId/versions')
   findVersions(
     @Param('testId') testId: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<TestVersionResponseDto[]> {
-    return this.versionsService.findAll(testId);
+    return this.versionsService.findAll(testId, user);
   }
 
   @Get('tests/:testId/versions/:versionNumber')
   findVersion(
     @Param('testId') testId: string,
     @Param('versionNumber') versionNumber: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<TestVersionResponseDto> {
-    return this.versionsService.findOne(testId, parseInt(versionNumber, 10));
+    return this.versionsService.findOne(testId, parseInt(versionNumber, 10), user);
   }
 }

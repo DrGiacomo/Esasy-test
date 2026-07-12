@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TestVersionResponseDto } from './dto/test-response.dto';
 
@@ -44,16 +45,30 @@ export class TestVersionsService {
     });
   }
 
-  async findAll(testId: string): Promise<TestVersionResponseDto[]> {
+  async findAll(testId: string, user: JwtPayload): Promise<TestVersionResponseDto[]> {
+    await this.assertTestOwnership(testId, user.orgId);
     return this.prisma.testVersion.findMany({
       where: { testId },
       orderBy: { versionNumber: 'desc' },
     });
   }
 
-  async findOne(testId: string, versionNumber: number): Promise<TestVersionResponseDto> {
-    return this.prisma.testVersion.findUniqueOrThrow({
+  async findOne(testId: string, versionNumber: number, user: JwtPayload): Promise<TestVersionResponseDto> {
+    await this.assertTestOwnership(testId, user.orgId);
+    const version = await this.prisma.testVersion.findUnique({
       where: { testId_versionNumber: { testId, versionNumber } },
     });
+    if (!version) throw new NotFoundException('Test version not found');
+    return version;
+  }
+
+  // Los snapshots contienen flowModel, selectores y código generado: sin este
+  // filtro cualquier usuario autenticado podía leer versiones de otra organización.
+  private async assertTestOwnership(testId: string, orgId: string): Promise<void> {
+    const test = await this.prisma.test.findFirst({
+      where: { id: testId, suite: { project: { organizationId: orgId } } },
+      select: { id: true },
+    });
+    if (!test) throw new NotFoundException('Test not found');
   }
 }

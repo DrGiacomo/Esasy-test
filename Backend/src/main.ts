@@ -6,10 +6,12 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix('api/v1');
-
-  const artifactsPath = process.env.ARTIFACTS_VOLUME_PATH ?? 'C:/artifacts';
-  app.useStaticAssets(artifactsPath, { prefix: '/artifacts' });
+  // Los artefactos NO se sirven como estáticos (los estáticos esquivan el JwtAuthGuard):
+  // los sirve ArtifactsController con auth + verificación de org, fuera del prefijo
+  // para preservar las URLs `/artifacts/...` ya almacenadas en la BD.
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['artifacts/:executionId/:filename'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
