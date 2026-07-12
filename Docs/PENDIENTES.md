@@ -58,6 +58,14 @@
 | 5.1 | **Secretos al executor** — el executor ahora recibe los secretos `ENV_VAR` de la org descifrados; los pasos los referencian como `{{NOMBRE}}` | 🔴 | **HECHO (2026-06-26)** | Diseño: el worker (`execution.processor`) descifra vía Vault e inyecta `NAME=value` (omite nombres reservados); el executor resuelve `{{NOMBRE}}` en `selector`/`value`. Eliminado el código muerto `getDecryptedValue()`. ⚠️ Reconstruir imagen del executor. |
 | 5.2 | **Git sync real** — push al repo | 🟠 | **HECHO (2026-06-28)** | `GithubProvider`/`GitlabProvider` hacen push real vía API REST (Contents/Repository Files), crean o actualizan el archivo. `git.service.sync` descifra el token, sanea la ruta (`syncPath/<slug>.spec.ts`) y commitea. Soporta Enterprise/self-hosted (`GITHUB_API_URL`/`GITLAB_API_URL`). |
 
+## Especial — Features avanzadas (visión, no en el roadmap original)
+
+> Features de mayor alcance que requieren infra/diseño nuevo. No bloquean el MVP.
+
+| # | Feature | Prioridad | Estado | Notas |
+|---|---|---|---|---|
+| E.1 | **RAG sobre los datos del tenant** — grounding de la IA en los tests/grabaciones/ejecuciones de la propia org. Mejora el chat ("¿qué tests cubren el login?"), el `nl-to-flow` y el self-healing (recuperar selectores/pasos de tests similares antes de generar) → menos alucinación, más consistencia. | ⭐ Especial | ABIERTO | **Diseño:** vector store en **pgvector** sobre el Postgres existente (el filtro `organizationId` va en el mismo `WHERE` que la búsqueda vectorial → aislamiento multi-tenant con el patrón actual). Nuevo `EmbeddingProvider` (Gemini `text-embedding-004`; DeepSeek no expone embeddings) inyectado como `EMBEDDING_PROVIDER` igual que `VISION_PROVIDER`. Modelo `KnowledgeChunk {orgId, sourceType, sourceId, content, embedding vector(768)}` + índice HNSW (migración SQL a mano, Prisma usa `Unsupported`+`$queryRaw`). Ingesta vía job BullMQ ante cambios de dominio; recuperación `ORDER BY embedding <=> $query LIMIT k` con `orgId` filtrado PRIMERO; contexto inyectado en el system prompt de `ChatService`/`SelfHealingService`. **Orden:** (1) pgvector+modelo+migración, (2) EmbeddingProvider, (3) ingesta de tests, (4) RetrievalService+chat, (5) ampliar a grabaciones/ejecuciones+self-healing. **Riesgos:** fuga cross-tenant (test dedicado desde el día 1), coste/latencia de embeddings (re-embeber solo al cambiar `flowModel`), **nunca indexar secretos ni `{{NOMBRE}}` resueltos**. |
+
 ## 6. Deuda técnica menor
 
 | # | Pendiente | Prioridad | Estado | Notas |
