@@ -143,14 +143,15 @@ model Membership {
 // Token de refresco JWT. Rotación obligatoria en cada uso (refresh token rotation).
 // El campo revokedAt permite invalidación sin borrar el registro (audit trail).
 model RefreshToken {
-  id        String    @id @default(uuid())
-  userId    String
-  tokenHash String    @unique // SHA-256 del token raw, nunca el token en claro
-  expiresAt DateTime
-  revokedAt DateTime? // null = activo, fecha = revocado
-  createdAt DateTime  @default(now())
-  userAgent String?   // User-Agent del cliente que lo generó
-  ipAddress String?   // IP del cliente que lo generó
+  id             String    @id @default(uuid())
+  userId         String
+  organizationId String?   // Org activa al emitir el token; el refresh reissue mantiene esta org
+  tokenHash      String    @unique // SHA-256 del token raw, nunca el token en claro
+  expiresAt      DateTime
+  revokedAt      DateTime? // null = activo, fecha = revocado
+  createdAt      DateTime  @default(now())
+  userAgent      String?   // User-Agent del cliente que lo generó
+  ipAddress      String?   // IP del cliente que lo generó
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

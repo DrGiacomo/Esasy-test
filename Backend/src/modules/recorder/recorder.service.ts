@@ -37,6 +37,14 @@ export class RecorderService implements OnModuleDestroy {
   ) {}
 
   async start(projectId: string, targetUrl: string, user: JwtPayload): Promise<RecorderSession> {
+    // Verificar que el proyecto pertenece a la org del usuario antes de provisionar
+    // nada: sin esto se creaban grabaciones referenciando proyectos de otra org.
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, organizationId: user.orgId },
+      select: { id: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
     const sessionId = randomUUID();
     const image = this.config.get<string>('RECORDER_IMAGE')!;
     const network = this.config.get<string>('DOCKER_NETWORK')!;

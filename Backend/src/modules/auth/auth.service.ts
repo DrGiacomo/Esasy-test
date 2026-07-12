@@ -77,17 +77,28 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
+    // Un usuario desactivado no puede seguir renovando tokens (antes lo hacía hasta expirar).
+    const user = await this.prisma.user.findUnique({ where: { id: stored.userId } });
+    if (!user || !user.isActive) throw new UnauthorizedException('User is inactive');
+
     // Rotación: revocar el token actual antes de emitir el nuevo
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
     });
 
-    // Obtener la membresía más antigua del usuario (org principal)
-    const membership = await this.prisma.membership.findFirst({
-      where: { userId: stored.userId },
-      orderBy: { joinedAt: 'asc' },
-    });
+    // Mantener la org de la sesión original. Solo si el token es previo a la migración
+    // (sin organizationId) se recae en la membresía más antigua.
+    const membership = stored.organizationId
+      ? await this.prisma.membership.findUnique({
+          where: {
+            userId_organizationId: { userId: stored.userId, organizationId: stored.organizationId },
+          },
+        })
+      : await this.prisma.membership.findFirst({
+          where: { userId: stored.userId },
+          orderBy: { joinedAt: 'asc' },
+        });
     if (!membership) throw new UnauthorizedException('No active membership found');
 
     return this.issueTokens(stored.userId, membership.organizationId, membership.role);
@@ -117,6 +128,7 @@ export class AuthService {
     await this.prisma.refreshToken.create({
       data: {
         userId,
+        organizationId: orgId, // el reissue mantendrá esta org
         tokenHash,
         expiresAt: this.refreshExpiry(),
         userAgent,

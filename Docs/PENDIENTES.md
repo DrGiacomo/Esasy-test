@@ -70,10 +70,15 @@
 
 > **2026-06-28:** roadmap completo — cerrados 🔴 (5.1, 1.1), 🟠 (1.2–1.5, 3.1, 4.1, 4.4, 5.2) y 🟡/🟢 (2.1, 2.2, 3.2, 4.2, 4.3, 6.1).
 >
-> **2026-07-12:** segunda auditoría (`audit-2026-07-12.md`): 24 hallazgos nuevos (5🔴 4🟠* 7🟡 7🟢).
-> Los **5 críticos quedaron resueltos el mismo día** (artefactos autenticados, DTOs estrictos en
-> updateTest/updateStep, reorder con ownership, versiones con filtro de org). Quedan abiertos los
-> ALTO/MEDIO/BAJO — ver ese documento. (*El 🟠 de `assert` ya estaba señalado en test/05-hallazgos.md #4.)
+> **2026-07-12:** segunda auditoría (`audit-2026-07-12.md`): 24 hallazgos nuevos (5🔴 5🟠 7🟡 7🟢).
+> Los **5 críticos y los 5 altos quedaron resueltos el mismo día** (2 commits en master):
+> 🔴 artefactos autenticados, DTOs estrictos en updateTest/updateStep, reorder con ownership,
+> versiones con filtro de org. 🟠 refresh con `isActive` + org preservada, vocabulario `assert`
+> alineado API↔executor, executionResults no colgados en RUNNING, recorder valida projectId.
+> Quedan abiertos MEDIO/BAJO — ver ese documento.
+>
+> ⚠️ **Nueva deuda operativa:** aplicar migración `20260712170000_refresh_token_org`
+> (`npx prisma migrate deploy`) y reconstruir la imagen del **executor** (nuevo manejo de `assert`).
 
 ### Deuda operativa / despliegue
 1. ⚠️ **Reconstruir imágenes** del **executor** y **recorder** (`docker compose --profile build-images build`):

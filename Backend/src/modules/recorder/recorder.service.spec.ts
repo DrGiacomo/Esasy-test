@@ -5,6 +5,7 @@ function build() {
   const prisma = {
     recording: { findUnique: jest.fn(), delete: jest.fn() },
     testSuite: { findFirst: jest.fn() },
+    project: { findFirst: jest.fn() },
     test: { create: jest.fn() },
     testStep: { create: jest.fn() },
     $transaction: jest.fn(),
@@ -14,6 +15,24 @@ function build() {
   const service = new RecorderService(config as never, prisma as never, jwt as never);
   return { prisma, service };
 }
+
+describe('RecorderService.start — multi-tenant', () => {
+  const user = { sub: 'u1', orgId: 'org-1', role: 'ADMIN' } as never;
+
+  it('rechaza un projectId de otra org sin provisionar el contenedor', async () => {
+    const { prisma, service } = build();
+    prisma.project.findFirst.mockResolvedValue(null);
+
+    await expect(service.start('proj-ajeno', 'http://x', user)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.project.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'proj-ajeno', organizationId: 'org-1' },
+      }),
+    );
+  });
+});
 
 describe('RecorderService.getRecording', () => {
   it('lanza si la grabación no existe o es de otra org', async () => {

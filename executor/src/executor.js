@@ -117,6 +117,9 @@ async function runStep(page, step) {
       await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
       break;
 
+    // `assert` genérico (lo emite la IA nl-to-flow): si hay `value` compara texto,
+    // si no equivale a assert_visible. Comparte la lógica con assert_text.
+    case 'assert':
     case 'assert_text': {
       await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
       const actual = (await page.textContent(selector)) ?? '';

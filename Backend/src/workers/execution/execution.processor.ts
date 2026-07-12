@@ -237,6 +237,15 @@ export class ExecutionProcessor extends WorkerHost {
       where: { id: executionId },
       data: { status: ExecutionStatus.FAILED, errorMessage: message, completedAt: new Date() },
     });
+    // Los executionResult pre-creados quedan en RUNNING si el contenedor nunca los
+    // actualiza (fallo de provisioning, timeout o excepción del worker). Cerrarlos a
+    // FAILED para que la UI no muestre tests "corriendo" dentro de una ejecución fallida.
+    await this.prisma.executionResult
+      .updateMany({
+        where: { executionId, status: ExecutionStatus.RUNNING },
+        data: { status: ExecutionStatus.FAILED },
+      })
+      .catch(() => undefined);
     await this.publish(publisher, executionId, 'execution:error', { message });
   }
 
