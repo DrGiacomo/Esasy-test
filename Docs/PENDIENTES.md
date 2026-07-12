@@ -71,11 +71,11 @@
 > **2026-06-28:** roadmap completo — cerrados 🔴 (5.1, 1.1), 🟠 (1.2–1.5, 3.1, 4.1, 4.4, 5.2) y 🟡/🟢 (2.1, 2.2, 3.2, 4.2, 4.3, 6.1).
 >
 > **2026-07-12:** segunda auditoría (`audit-2026-07-12.md`): 24 hallazgos nuevos (5🔴 5🟠 7🟡 7🟢).
-> Los **5 críticos y los 5 altos quedaron resueltos el mismo día** (2 commits en master):
-> 🔴 artefactos autenticados, DTOs estrictos en updateTest/updateStep, reorder con ownership,
-> versiones con filtro de org. 🟠 refresh con `isActive` + org preservada, vocabulario `assert`
-> alineado API↔executor, executionResults no colgados en RUNNING, recorder valida projectId.
-> Quedan abiertos MEDIO/BAJO — ver ese documento.
+> **5 críticos + 5 altos + 7 medios resueltos el mismo día** (3 commits en master). Solo quedan
+> los 7 🟢 BAJOS abiertos.
+> - 🔴 artefactos autenticados, DTOs estrictos en updateTest/updateStep, reorder con ownership, versiones con filtro de org.
+> - 🟠 refresh con `isActive` + org preservada, vocabulario `assert` alineado API↔executor, executionResults no colgados, recorder valida projectId.
+> - 🟡 transiciones de estado atómicas (worker + cancel), reject valida status, chat valida `relatedTestId`, versionNumber con advisory lock, recorder sin huérfanos/zombies + barrido al arrancar.
 >
 > ⚠️ **Nueva deuda operativa:** aplicar migración `20260712170000_refresh_token_org`
 > (`npx prisma migrate deploy`) y reconstruir la imagen del **executor** (nuevo manejo de `assert`).

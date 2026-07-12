@@ -17,6 +17,12 @@ export class TestVersionsService {
   ): Promise<void> {
     const db = tx ?? this.prisma;
 
+    // Lock de aviso a nivel de transacción por test: serializa snapshots concurrentes
+    // del mismo test para que `count + 1` no colisione contra la unique testId_versionNumber
+    // (P2002). Se libera al terminar la transacción. Requiere que snapshot corra dentro
+    // de un $transaction (así lo hacen todos sus llamadores).
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${testId}))`;
+
     const test = await db.test.findUniqueOrThrow({
       where: { id: testId },
       include: { steps: { orderBy: { order: 'asc' } } },

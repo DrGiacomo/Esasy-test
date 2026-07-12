@@ -3,9 +3,13 @@ import { ExecutionProcessor } from './execution.processor';
 
 type WaitOutcome = { exitCode: number | null; aborted: 'cancelled' | 'timeout' | null };
 
+type RedisPublisher = { publish: jest.Mock };
+
 type ProcessorInternals = {
   getSecretEnvVars(orgId: string, executionId: string): Promise<string[]>;
   waitForContainerOrAbort(containerId: string, executionId: string): Promise<WaitOutcome>;
+  transition(publisher: RedisPublisher, executionId: string, status: ExecutionStatus): Promise<void>;
+  failExecution(publisher: RedisPublisher, executionId: string, message: string): Promise<void>;
 };
 
 function buildProcessor() {
@@ -76,6 +80,70 @@ describe('ExecutionProcessor — inyección de secretos', () => {
     prisma.secret.findMany.mockResolvedValue([]);
 
     expect(await processor.getSecretEnvVars('org-1', 'exec-1')).toEqual([]);
+  });
+});
+
+describe('ExecutionProcessor — transiciones de estado atómicas', () => {
+  function buildState() {
+    const prisma = {
+      execution: { updateMany: jest.fn() },
+      executionResult: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    };
+    const processor = new ExecutionProcessor(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    const publisher: RedisPublisher = { publish: jest.fn().mockResolvedValue(undefined) };
+    return { prisma, publisher, processor: processor as unknown as ProcessorInternals };
+  }
+
+  it('transition no publica si el update condicional no afecta filas (cancelada/borrada)', async () => {
+    const { prisma, publisher, processor } = buildState();
+    prisma.execution.updateMany.mockResolvedValue({ count: 0 });
+
+    await processor.transition(publisher, 'exec-1', ExecutionStatus.RUNNING);
+
+    // El where excluye CANCELLED: nunca pisa una cancelación del usuario.
+    expect(prisma.execution.updateMany).toHaveBeenCalledWith({
+      where: { id: 'exec-1', status: { not: ExecutionStatus.CANCELLED } },
+      data: expect.objectContaining({ status: ExecutionStatus.RUNNING }),
+    });
+    expect(publisher.publish).not.toHaveBeenCalled();
+  });
+
+  it('transition publica cuando el update sí transiciona', async () => {
+    const { prisma, publisher, processor } = buildState();
+    prisma.execution.updateMany.mockResolvedValue({ count: 1 });
+
+    await processor.transition(publisher, 'exec-1', ExecutionStatus.COMPLETED);
+
+    expect(publisher.publish).toHaveBeenCalled();
+  });
+
+  it('failExecution no pisa una ejecución cancelada y no toca sus resultados', async () => {
+    const { prisma, publisher, processor } = buildState();
+    prisma.execution.updateMany.mockResolvedValue({ count: 0 });
+
+    await processor.failExecution(publisher, 'exec-1', 'boom');
+
+    expect(prisma.executionResult.updateMany).not.toHaveBeenCalled();
+    expect(publisher.publish).not.toHaveBeenCalled();
+  });
+
+  it('failExecution marca los executionResult en RUNNING como FAILED', async () => {
+    const { prisma, publisher, processor } = buildState();
+    prisma.execution.updateMany.mockResolvedValue({ count: 1 });
+
+    await processor.failExecution(publisher, 'exec-1', 'boom');
+
+    expect(prisma.executionResult.updateMany).toHaveBeenCalledWith({
+      where: { executionId: 'exec-1', status: ExecutionStatus.RUNNING },
+      data: { status: ExecutionStatus.FAILED },
+    });
+    expect(publisher.publish).toHaveBeenCalled();
   });
 });
 

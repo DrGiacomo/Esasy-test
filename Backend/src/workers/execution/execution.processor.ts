@@ -195,18 +195,6 @@ export class ExecutionProcessor extends WorkerHost {
     executionId: string,
     status: ExecutionStatus,
   ): Promise<void> {
-    // No pisar una cancelación realizada por el usuario mientras el job seguía vivo.
-    if (status !== ExecutionStatus.PROVISIONING) {
-      const cur = await this.prisma.execution
-        .findUnique({ where: { id: executionId }, select: { status: true } })
-        .catch(() => null);
-      if (!cur) return; // borrada
-      if (cur.status === ExecutionStatus.CANCELLED) {
-        this.logger.warn(`Execution ${executionId} already CANCELLED — skipping → ${status}`);
-        return;
-      }
-    }
-
     const data: Record<string, unknown> = { status };
     if (
       ([ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED] as ExecutionStatus[]).includes(
@@ -215,28 +203,30 @@ export class ExecutionProcessor extends WorkerHost {
     ) {
       data['completedAt'] = new Date();
     }
-    try {
-      await this.prisma.execution.update({ where: { id: executionId }, data });
-    } catch (err) {
-      if (this.isDeleted(err)) {
-        this.logger.warn(`Execution ${executionId} was deleted — skipping transition to ${status}`);
-        return;
-      }
-      throw err;
+
+    // Update condicional atómico: nunca pisa una cancelación del usuario. Con
+    // check-then-update una cancelación en la ventana se perdía y el poll de
+    // waitForContainerOrAbort ya no veía CANCELLED (el contenedor corría hasta el final).
+    // updateMany no lanza P2025: si la fila fue borrada/cancelada, count === 0.
+    const { count } = await this.prisma.execution.updateMany({
+      where: { id: executionId, status: { not: ExecutionStatus.CANCELLED } },
+      data,
+    });
+    if (count === 0) {
+      this.logger.warn(`Execution ${executionId} cancelled/deleted — skipping → ${status}`);
+      return;
     }
     await this.publish(publisher, executionId, 'execution:status', { status });
     this.logger.log(`Execution ${executionId} → ${status}`);
   }
 
   private async failExecution(publisher: RedisClient, executionId: string, message: string): Promise<void> {
-    const cur = await this.prisma.execution
-      .findUnique({ where: { id: executionId }, select: { status: true } })
-      .catch(() => null);
-    if (!cur || cur.status === ExecutionStatus.CANCELLED) return; // no clobber cancel/borrada
-    await this.prisma.execution.update({
-      where: { id: executionId },
+    // Condicional atómico: no pisa una cancelación ni falla una ejecución borrada.
+    const { count } = await this.prisma.execution.updateMany({
+      where: { id: executionId, status: { not: ExecutionStatus.CANCELLED } },
       data: { status: ExecutionStatus.FAILED, errorMessage: message, completedAt: new Date() },
     });
+    if (count === 0) return; // ya cancelada o borrada
     // Los executionResult pre-creados quedan en RUNNING si el contenedor nunca los
     // actualiza (fallo de provisioning, timeout o excepción del worker). Cerrarlos a
     // FAILED para que la UI no muestre tests "corriendo" dentro de una ejecución fallida.

@@ -31,7 +31,7 @@ export class AiController {
     @Body() dto: ChatRequestDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.chatService.chat(dto.messages, user.sub, dto.relatedTestId);
+    return this.chatService.chat(dto.messages, user.sub, user.orgId, dto.relatedTestId);
   }
 
   @Post('codegen')

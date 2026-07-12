@@ -104,9 +104,11 @@ export class ExecutionsService {
     ];
 
     if (cancellable.includes(execution.status)) {
-      // 1) Marcar CANCELLED: el worker lo detecta por polling y detiene el contenedor.
-      await this.prisma.execution.update({
-        where: { id },
+      // 1) Marcar CANCELLED con update condicional atómico: si la ejecución terminó
+      //    entre el findById y aquí, no re-marca una COMPLETED/FAILED como CANCELLED
+      //    (antes pisaba su completedAt real). count === 0 = ya no era cancelable.
+      await this.prisma.execution.updateMany({
+        where: { id, status: { in: cancellable } },
         data: { status: ExecutionStatus.CANCELLED, completedAt: new Date() },
       });
       // 2) Quitar el job de la cola si aún no se ejecuta (si está activo, el worker ya lo verá).

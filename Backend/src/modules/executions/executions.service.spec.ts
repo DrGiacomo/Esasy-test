@@ -14,6 +14,7 @@ function buildMocks() {
       findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       delete: jest.fn(),
     },
     executionResult: { findMany: jest.fn() },
@@ -92,8 +93,9 @@ describe('ExecutionsService — cancel', () => {
 
     await service.cancel('exec-1', user);
 
-    expect(prisma.execution.update).toHaveBeenCalledWith({
-      where: { id: 'exec-1' },
+    // Update condicional atómico: solo transiciona si sigue en un estado cancelable.
+    expect(prisma.execution.updateMany).toHaveBeenCalledWith({
+      where: { id: 'exec-1', status: { in: runningStatuses } },
       data: expect.objectContaining({ status: ExecutionStatus.CANCELLED }),
     });
     expect(queue.remove).toHaveBeenCalledWith('exec-1');
@@ -110,7 +112,7 @@ describe('ExecutionsService — cancel', () => {
 
     expect(prisma.execution.delete).toHaveBeenCalledWith({ where: { id: 'exec-1' } });
     expect(queue.remove).toHaveBeenCalledWith('exec-1');
-    expect(prisma.execution.update).not.toHaveBeenCalled();
+    expect(prisma.execution.updateMany).not.toHaveBeenCalled();
   });
 
   it('cannot cancel an execution owned by another org', async () => {
@@ -118,7 +120,7 @@ describe('ExecutionsService — cancel', () => {
     prisma.execution.findFirst.mockResolvedValue(null); // findById no lo encuentra para esta org
 
     await expect(service.cancel('exec-1', otherOrgUser)).rejects.toBeInstanceOf(NotFoundException);
-    expect(prisma.execution.update).not.toHaveBeenCalled();
+    expect(prisma.execution.updateMany).not.toHaveBeenCalled();
     expect(prisma.execution.delete).not.toHaveBeenCalled();
   });
 
@@ -128,6 +130,6 @@ describe('ExecutionsService — cancel', () => {
     queue.remove.mockRejectedValue(new Error('job is locked/active'));
 
     await expect(service.cancel('exec-1', user)).resolves.toBeUndefined();
-    expect(prisma.execution.update).toHaveBeenCalled();
+    expect(prisma.execution.updateMany).toHaveBeenCalled();
   });
 });

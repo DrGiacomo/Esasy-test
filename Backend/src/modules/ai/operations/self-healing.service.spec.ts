@@ -216,4 +216,34 @@ describe('SelfHealingService.reject', () => {
     );
     expect(prisma.selectorHealingLog.update).not.toHaveBeenCalled();
   });
+
+  it('no permite rechazar un log que no está PENDING_APPROVAL', async () => {
+    const { prisma, service } = buildMocks();
+    prisma.selectorHealingLog.findFirst.mockResolvedValue({
+      id: 'log-1',
+      stepId: 'step-1',
+      status: HealingStatus.APPROVED,
+    });
+
+    // Sin la validación se marcaba REJECTED dejando el selector ya aplicado (inconsistente).
+    await expect(service.reject('log-1', 'user-1', 'org-1', 'nope')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.selectorHealingLog.update).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un log pendiente', async () => {
+    const { prisma, service } = buildMocks();
+    prisma.selectorHealingLog.findFirst.mockResolvedValue({
+      id: 'log-1',
+      stepId: 'step-1',
+      status: HealingStatus.PENDING_APPROVAL,
+    });
+
+    await service.reject('log-1', 'user-1', 'org-1', 'nope');
+
+    expect(prisma.selectorHealingLog.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: HealingStatus.REJECTED }) }),
+    );
+  });
 });

@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -21,7 +22,7 @@ interface MappedStep {
 }
 
 @Injectable()
-export class RecorderService implements OnModuleDestroy {
+export class RecorderService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RecorderService.name);
   private readonly docker = new Docker(
     process.platform === 'win32'
@@ -35,6 +36,29 @@ export class RecorderService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
   ) {}
+
+  /**
+   * Al arrancar, barre contenedores recorder huérfanos de un proceso anterior
+   * (AutoRemove:false → tras un crash del backend nunca se eliminaban solos, solo se
+   * auto-apagaban a los 30 min y se acumulaban como `exited`). Best-effort: si Docker
+   * no está disponible no debe impedir el arranque del backend.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const orphans = await this.docker.listContainers({
+        all: true,
+        filters: { label: ['e2e.recorder'] },
+      });
+      for (const c of orphans) {
+        await this.docker.getContainer(c.Id).remove({ force: true }).catch(() => null);
+      }
+      if (orphans.length > 0) {
+        this.logger.warn(`Reaped ${orphans.length} orphaned recorder container(s) from a previous run`);
+      }
+    } catch (err) {
+      this.logger.warn(`Recorder orphan sweep skipped: ${String(err)}`);
+    }
+  }
 
   async start(projectId: string, targetUrl: string, user: JwtPayload): Promise<RecorderSession> {
     // Verificar que el proyecto pertenece a la org del usuario antes de provisionar
@@ -70,10 +94,18 @@ export class RecorderService implements OnModuleDestroy {
         `BACKEND_WS_URL=ws://host.docker.internal:3000`,
         `RECORDER_TOKEN=${recorderToken}`,
       ],
+      // Label para poder barrer contenedores huérfanos tras un crash del backend (reap()).
+      Labels: { 'e2e.recorder': sessionId },
       HostConfig: { NetworkMode: network, AutoRemove: false, ShmSize: 256 * 1024 * 1024 },
     });
 
-    await container.start();
+    // Si start() falla, el contenedor ya creado (AutoRemove:false) quedaría huérfano.
+    try {
+      await container.start();
+    } catch (err) {
+      await container.remove({ force: true }).catch(() => null);
+      throw err;
+    }
 
     const session: RecorderSession = {
       sessionId,
@@ -102,15 +134,17 @@ export class RecorderService implements OnModuleDestroy {
     if (session.expireTimer) clearTimeout(session.expireTimer);
     if (session.flushTimer) clearInterval(session.flushTimer);
 
-    // Guardar primero; si falla, NO borrar la sesión en silencio: se propaga el error
-    // (el usuario sabrá que no se guardó) pero el contenedor sí se limpia.
+    // Guardar primero; si falla, se propaga el error (el usuario sabrá que no se guardó),
+    // pero el contenedor SIEMPRE se limpia y la sesión SIEMPRE sale del Map — antes, si
+    // saveRecording() lanzaba, la sesión quedaba zombie en el Map (timers ya cancelados,
+    // sin expire posible) hasta reiniciar el backend.
     try {
       await this.saveRecording(session);
     } finally {
       await this.destroyContainer(session.containerId);
+      session.status = 'STOPPED';
+      this.sessions.delete(sessionId);
     }
-    session.status = 'STOPPED';
-    this.sessions.delete(sessionId);
   }
 
   addStep(sessionId: string, step: CapturedStep): void {

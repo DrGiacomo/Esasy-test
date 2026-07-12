@@ -190,6 +190,12 @@ export class SelfHealingService {
     });
     if (!log) throw new NotFoundException('Healing log not found');
 
+    // Igual que approve(): solo se rechaza una propuesta pendiente. Sin esto se podía
+    // "rechazar" un log ya APPROVED, dejando el selector aplicado con status REJECTED.
+    if (log.status !== HealingStatus.PENDING_APPROVAL) {
+      throw new BadRequestException(`Healing log is not pending approval (status: ${log.status})`);
+    }
+
     return this.prisma.selectorHealingLog.update({
       where: { id: healingLogId },
       data: {
