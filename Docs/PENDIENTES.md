@@ -9,6 +9,25 @@
 
 ---
 
+## ⬜ Datos de demostración (`seed`) — añadido el `2026-08-13`
+
+Cruce #5 de `C:\Proyectos\Docs\TRASPLANTES_CRUZADOS.md`: **S.A.A.I → todos**. Con el flujo core
+funcionando al 95 %, lo que falta para enseñarlo no es producto: es que arranque con una
+organización, un proyecto y un test dentro, en vez de una pantalla vacía.
+
+**Patrón a copiar** de `Induccion S.A.A.I\Backend\usuarios\management\commands\datos_demo.py` (ya
+trasplantado a RUKIA el mismo día, con su salvaguarda): idempotente · marca `[demo]` y borra solo
+lo suyo · `--borrar` · **los datos cuentan una historia** (aquí: un test que pasa, uno que falla por
+selector roto y su propuesta de self-healing en `PENDING_APPROVAL`) · imprime un guion de qué mirar
+al terminar · se niega si la base ya tiene datos reales.
+
+> Multi-tenant obliga a una decisión extra que los otros proyectos no tienen: **el seed crea su
+> propia organización de demostración**, nunca siembra dentro de una existente.
+
+**Estimado: 30-45 min** (Prisma + el árbol org → proyecto → test → flujo → ejecución).
+
+---
+
 ## Leyenda
 - 🔴 **Crítico para producción** — bloquea uso real con clientes.
 - 🟠 **Alto** — impacto fuerte en robustez/calidad.
