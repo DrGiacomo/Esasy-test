@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: e2e_postgres
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: e2e_user
       POSTGRES_PASSWORD: e2e_pass
@@ -19,6 +21,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: e2e_redis
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
