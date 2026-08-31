@@ -143,14 +143,15 @@ model Membership {
 // Token de refresco JWT. Rotación obligatoria en cada uso (refresh token rotation).
 // El campo revokedAt permite invalidación sin borrar el registro (audit trail).
 model RefreshToken {
-  id        String    @id @default(uuid())
-  userId    String
-  tokenHash String    @unique // SHA-256 del token raw, nunca el token en claro
-  expiresAt DateTime
-  revokedAt DateTime? // null = activo, fecha = revocado
-  createdAt DateTime  @default(now())
-  userAgent String?   // User-Agent del cliente que lo generó
-  ipAddress String?   // IP del cliente que lo generó
+  id             String    @id @default(uuid())
+  userId         String
+  organizationId String?   // Org activa al emitir el token; el refresh reissue mantiene esta org
+  tokenHash      String    @unique // SHA-256 del token raw, nunca el token en claro
+  expiresAt      DateTime
+  revokedAt      DateTime? // null = activo, fecha = revocado
+  createdAt      DateTime  @default(now())
+  userAgent      String?   // User-Agent del cliente que lo generó
+  ipAddress      String?   // IP del cliente que lo generó
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -171,6 +172,8 @@ model Project {
   description    String?
   baseUrl        String   // URL de la aplicación bajo prueba
   isArchived     Boolean  @default(false)
+  maxParallel    Int?     // Override de paralelismo del executor (null = default del worker)
+  recordVideo    Boolean  @default(true) // Grabar video en las ejecuciones de este proyecto
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -178,6 +181,7 @@ model Project {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   testSuites   TestSuite[]
   executions   Execution[]
+  recordings   Recording[]
 
   @@index([organizationId])
   @@map("projects")
@@ -210,7 +214,7 @@ model Test {
   name           String
   description    String?
   status         TestStatus @default(DRAFT)
-  semanticModel  Json       // Semantic Model: [{action, target, value, assertion}]
+  flowModel      Json       // Modelo del flujo (antes "semanticModel"): [{action, target, value, assertion}]
   generatedCode  String?    // TypeScript POM generado por el AI Engine
   currentVersion Int        @default(1) // Apunta a TestVersion.versionNumber activo
   createdAt      DateTime   @default(now())
@@ -457,6 +461,30 @@ model Secret {
   @@unique([organizationId, name]) // No duplicar nombres por org
   @@index([organizationId])
   @@map("secrets")
+}
+
+// =============================================================================
+// DOMINIO: GRABACIONES
+// =============================================================================
+
+// Grabación de sesión del recorder. Se persiste al detener la sesión.
+// steps: array JSONB de acciones capturadas [{type, selector, value, url, key, x, y}]
+model Recording {
+  id        String   @id @default(uuid())
+  sessionId String   @unique
+  projectId String
+  orgId     String
+  targetUrl String
+  steps     Json     @default("[]")
+  startedAt DateTime
+  stoppedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([orgId])
+  @@map("recordings")
 }
 
 // =============================================================================

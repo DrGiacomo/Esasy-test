@@ -21,6 +21,8 @@ export class ProjectsService {
         name: dto.name,
         description: dto.description,
         baseUrl: dto.baseUrl,
+        maxParallel: dto.maxParallel,
+        recordVideo: dto.recordVideo,
       },
     });
     return project;

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { AiOperationType } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AiAuditService } from '../audit/ai-audit.service';
@@ -14,13 +14,14 @@ export class CodegenService {
     private readonly audit: AiAuditService,
   ) {}
 
-  async generate(testId: string, userId: string): Promise<string> {
-    const test = await this.prisma.test.findUniqueOrThrow({
-      where: { id: testId },
+  async generate(testId: string, userId: string, orgId: string): Promise<string> {
+    const test = await this.prisma.test.findFirst({
+      where: { id: testId, suite: { project: { organizationId: orgId } } },
       include: { steps: { orderBy: { order: 'asc' } } },
     });
+    if (!test) throw new NotFoundException('Test not found');
 
-    const messages = buildCodegenPrompt(test.name, test.semanticModel);
+    const messages = buildCodegenPrompt(test.name, test.flowModel);
 
     let result;
     try {

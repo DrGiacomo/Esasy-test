@@ -31,7 +31,7 @@ export class AiController {
     @Body() dto: ChatRequestDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.chatService.chat(dto.messages, user.sub, dto.relatedTestId);
+    return this.chatService.chat(dto.messages, user.sub, user.orgId, dto.relatedTestId);
   }
 
   @Post('codegen')
@@ -40,7 +40,7 @@ export class AiController {
     @Body() dto: CodegenRequestDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.codegenService.generate(dto.testId, user.sub);
+    return this.codegenService.generate(dto.testId, user.sub, user.orgId);
   }
 
   @Post('nl-to-flow')
@@ -49,7 +49,7 @@ export class AiController {
     @Body() dto: NlToFlowRequestDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.nlToFlowService.convert(dto.prompt, dto.projectId, user.sub);
+    return this.nlToFlowService.convert(dto.prompt, dto.projectId, user.sub, user.orgId);
   }
 
   @Post('heal')
@@ -58,7 +58,7 @@ export class AiController {
     @Body() dto: HealStepRequestDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.selfHealingService.propose(dto.stepId, dto.pageHtml, user.sub);
+    return this.selfHealingService.propose(dto.stepId, dto.pageHtml, user.sub, user.orgId);
   }
 
   @Post('heal/:healingLogId/approve')
@@ -67,7 +67,7 @@ export class AiController {
     @Param('healingLogId') healingLogId: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.selfHealingService.approve(healingLogId, user.sub);
+    return this.selfHealingService.approve(healingLogId, user.sub, user.orgId);
   }
 
   @Post('heal/:healingLogId/reject')
@@ -77,6 +77,6 @@ export class AiController {
     @Body() dto: HealingReviewDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.selfHealingService.reject(healingLogId, user.sub, dto.rejectionReason);
+    return this.selfHealingService.reject(healingLogId, user.sub, user.orgId, dto.rejectionReason);
   }
 }

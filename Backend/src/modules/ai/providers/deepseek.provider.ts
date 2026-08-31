@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { AiMessage, AiProvider, AiResponse } from './ai-provider.interface';
+import { AiCompleteOptions, AiMessage, AiProvider, AiResponse } from './ai-provider.interface';
+import { isRetryableHttpError, withRetry } from '../util/retry';
 
 @Injectable()
 export class DeepSeekProvider implements AiProvider {
@@ -14,28 +15,53 @@ export class DeepSeekProvider implements AiProvider {
     this.apiKey = config.get<string>('DEEPSEEK_API_KEY')!;
   }
 
-  async complete(messages: AiMessage[], model = 'deepseek-chat'): Promise<AiResponse> {
+  supportsImages(): boolean {
+    return false;
+  }
+
+  async complete(
+    messages: AiMessage[],
+    model = 'deepseek-chat',
+    options: AiCompleteOptions = {},
+  ): Promise<AiResponse> {
     const start = Date.now();
 
-    const response = await axios.post(
-      `${this.baseUrl}/v1/chat/completions`,
-      { model, messages, temperature: 0.2 },
-      {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 30000,
-      },
-    );
+    const body: Record<string, unknown> = { model, messages, temperature: 0.2 };
+    if (options.json) {
+      body.response_format = { type: 'json_object' };
+    }
 
-    const choice = response.data.choices[0];
-    const usage = response.data.usage;
+    let response;
+    try {
+      // Reintentos con backoff ante 429/5xx/timeout — un pico transitorio no debe tumbar la operación.
+      response = await withRetry(
+        () =>
+          axios.post(`${this.baseUrl}/v1/chat/completions`, body, {
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+          }),
+        isRetryableHttpError,
+      );
+    } catch (err) {
+      this.logger.error(`DeepSeek request failed: ${String(err)}`);
+      throw new ServiceUnavailableException('AI provider request failed');
+    }
 
+    const choice = response.data?.choices?.[0];
+    const content = choice?.message?.content;
+    if (typeof content !== 'string' || content.length === 0) {
+      this.logger.error('DeepSeek returned an empty/invalid response');
+      throw new ServiceUnavailableException('AI provider returned an empty response');
+    }
+
+    const usage = response.data.usage ?? {};
     return {
-      content: choice.message.content as string,
-      inputTokens: usage.prompt_tokens as number,
-      outputTokens: usage.completion_tokens as number,
+      content,
+      inputTokens: (usage.prompt_tokens as number) ?? 0,
+      outputTokens: (usage.completion_tokens as number) ?? 0,
       latencyMs: Date.now() - start,
       modelUsed: model,
     };

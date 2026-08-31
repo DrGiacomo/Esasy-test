@@ -11,10 +11,18 @@ export function useRecorderSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return;
 
-    recorderSocket.connect();
-    recorderSocket.emit('session:join', { sessionId });
+    function joinSession() {
+      recorderSocket.emit('session:join', { sessionId });
+      setConnected(true);
+    }
 
-    recorderSocket.on('connect', () => setConnected(true));
+    recorderSocket.connect();
+
+    // If already connected (e.g. reused socket), join immediately
+    if (recorderSocket.connected) {
+      joinSession();
+    }
+    recorderSocket.on('connect', joinSession);
     recorderSocket.on('disconnect', () => setConnected(false));
 
     recorderSocket.on('frame', (data: { data: string }) => {

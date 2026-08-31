@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateStepDto } from './dto/create-step.dto';
+import { UpdateStepDto } from './dto/update-step.dto';
 import { ReorderStepsDto } from './dto/reorder-steps.dto';
 import { StepResponseDto } from './dto/test-response.dto';
 import { TestVersionsService } from './test-versions.service';
@@ -29,7 +30,7 @@ export class TestStepsService {
   async update(
     testId: string,
     stepId: string,
-    dto: Partial<CreateStepDto>,
+    dto: UpdateStepDto,
     user: JwtPayload,
   ): Promise<StepResponseDto> {
     await this.assertTestOwnership(testId, user.orgId);
@@ -57,7 +58,13 @@ export class TestStepsService {
     return this.prisma.$transaction(async (tx) => {
       await this.versions.snapshot(testId, tx, { changelog: 'Steps reordered' });
       for (const { stepId, order } of dto.steps) {
-        await tx.testStep.update({ where: { id: stepId }, data: { order } });
+        // El where incluye testId: un stepId de otro test (u otra org) no matchea
+        // y aborta la transacción entera en vez de mutar datos ajenos.
+        const { count } = await tx.testStep.updateMany({
+          where: { id: stepId, testId },
+          data: { order },
+        });
+        if (count === 0) throw new NotFoundException(`Step not found: ${stepId}`);
       }
       return tx.testStep.findMany({
         where: { testId },

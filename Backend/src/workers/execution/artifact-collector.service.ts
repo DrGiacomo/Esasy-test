@@ -16,14 +16,14 @@ export class ArtifactCollectorService {
   } {
     const base = this.config.get<string>('ARTIFACTS_VOLUME_PATH', '/artifacts');
 
-    const screenshotPath = path.join(base, executionId, testId, 'screenshot.jpg');
-    const videoPath = path.join(base, executionId, testId, 'video.webm');
-    const tracePath = path.join(base, executionId, testId, 'trace.zip');
+    const screenshotPath = path.join(base, executionId, `${testId}_final.png`);
+    const videoPath = path.join(base, executionId, `${testId}.webm`);
+    const tracePath = path.join(base, executionId, `${testId}.zip`);
 
     return {
-      screenshotUrl: fs.existsSync(screenshotPath) ? `/artifacts/${executionId}/${testId}/screenshot.jpg` : null,
-      videoUrl: fs.existsSync(videoPath) ? `/artifacts/${executionId}/${testId}/video.webm` : null,
-      traceUrl: fs.existsSync(tracePath) ? `/artifacts/${executionId}/${testId}/trace.zip` : null,
+      screenshotUrl: fs.existsSync(screenshotPath) ? `/artifacts/${executionId}/${testId}_final.png` : null,
+      videoUrl: fs.existsSync(videoPath) ? `/artifacts/${executionId}/${testId}.webm` : null,
+      traceUrl: fs.existsSync(tracePath) ? `/artifacts/${executionId}/${testId}.zip` : null,
     };
   }
 }

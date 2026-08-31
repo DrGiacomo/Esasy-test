@@ -14,11 +14,12 @@ interface ExecutionEvent {
 export function useExecutionSocket(executionId: string) {
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
   const [status, setStatus] = useState<ExecutionStatus | null>(null);
+  const [connected, setConnected] = useState(executionsSocket.connected);
 
   useEffect(() => {
     if (!executionId) return;
 
-    executionsSocket.connect();
+    if (!executionsSocket.connected) executionsSocket.connect();
     executionsSocket.emit('execution:subscribe', { executionId });
 
     const onStatus = (data: ExecutionEvent) => {
@@ -26,18 +27,28 @@ export function useExecutionSocket(executionId: string) {
       if (data.status) setStatus(data.status);
     };
 
+    const onConnect = () => {
+      setConnected(true);
+      executionsSocket.emit('execution:subscribe', { executionId });
+    };
+
+    const onDisconnect = () => setConnected(false);
+
     executionsSocket.on('execution:status', onStatus);
     executionsSocket.on('result:completed', onStatus);
     executionsSocket.on('result:started', onStatus);
+    executionsSocket.on('connect', onConnect);
+    executionsSocket.on('disconnect', onDisconnect);
 
     return () => {
       executionsSocket.emit('execution:unsubscribe', { executionId });
       executionsSocket.off('execution:status', onStatus);
       executionsSocket.off('result:completed', onStatus);
       executionsSocket.off('result:started', onStatus);
-      executionsSocket.disconnect();
+      executionsSocket.off('connect', onConnect);
+      executionsSocket.off('disconnect', onDisconnect);
     };
   }, [executionId]);
 
-  return { events, status };
+  return { events, status, connected };
 }

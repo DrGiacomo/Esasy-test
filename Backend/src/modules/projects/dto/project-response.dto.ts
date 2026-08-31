@@ -5,6 +5,8 @@ export class ProjectResponseDto {
   description: string | null;
   baseUrl: string;
   isArchived: boolean;
+  maxParallel: number | null;
+  recordVideo: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

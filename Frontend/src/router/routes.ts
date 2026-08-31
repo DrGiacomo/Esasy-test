@@ -7,6 +7,7 @@ export const ROUTES = {
   TEST_DETAIL: (id: string) => `/tests/${id}`,
   FLOW_EDITOR: (testId: string) => `/tests/${testId}/editor`,
   RECORDER: '/recorder',
+  RECORDINGS: '/recordings',
   EXECUTIONS: '/executions',
   EXECUTION_DETAIL: (id: string) => `/executions/${id}`,
   REPORT: (executionId: string) => `/reports/${executionId}`,

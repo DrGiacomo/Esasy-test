@@ -25,6 +25,11 @@ export class ExecutionsController {
     return this.executionsService.trigger(dto, user);
   }
 
+  @Get()
+  findAllForOrg(@CurrentUser() user: JwtPayload): Promise<ExecutionResponseDto[]> {
+    return this.executionsService.findAllForOrg(user);
+  }
+
   @Get('project/:projectId')
   findAll(
     @Param('projectId') projectId: string,
@@ -39,6 +44,14 @@ export class ExecutionsController {
     @CurrentUser() user: JwtPayload,
   ): Promise<ExecutionResponseDto> {
     return this.executionsService.findById(id, user);
+  }
+
+  @Get(':id/results')
+  findResults(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.executionsService.findResults(id, user);
   }
 
   @Delete(':id')

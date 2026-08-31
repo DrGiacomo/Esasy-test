@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi, type LoginDto, type RegisterDto } from '../auth.api';
@@ -11,6 +12,21 @@ interface JwtPayload { sub: string; orgId: string; role: MemberRole; email: stri
 function parseJwt(token: string): JwtPayload | null {
   try { return JSON.parse(atob(token.split('.')[1])) as JwtPayload; }
   catch { return null; }
+}
+
+function extractError(e: unknown, fallback: string): string {
+  if (axios.isAxiosError(e)) {
+    const msg = (e.response?.data as { message?: { message?: string | string[]; error?: string } | string } | undefined)?.message;
+    if (msg) {
+      if (typeof msg === 'object') {
+        if (Array.isArray(msg.message)) return msg.message.join(', ');
+        if (typeof msg.message === 'string') return msg.message;
+        if (typeof msg.error === 'string') return msg.error;
+      }
+      if (typeof msg === 'string') return msg;
+    }
+  }
+  return e instanceof Error ? e.message : fallback;
 }
 
 export function useAuth() {
@@ -29,7 +45,7 @@ export function useAuth() {
       setAuth({ id: payload.sub, email: dto.email, displayName: null, orgId: payload.orgId, role: payload.role }, tokens.accessToken);
       void navigate(ROUTES.PROJECTS);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al iniciar sesión');
+      setError(extractError(e, 'Error al iniciar sesión'));
     } finally { setLoading(false); }
   }
 
@@ -43,7 +59,7 @@ export function useAuth() {
       setAuth({ id: payload.sub, email: dto.email, displayName: dto.displayName, orgId: payload.orgId, role: payload.role }, tokens.accessToken);
       void navigate(ROUTES.PROJECTS);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al registrarse');
+      setError(extractError(e, 'Error al registrarse'));
     } finally { setLoading(false); }
   }
 

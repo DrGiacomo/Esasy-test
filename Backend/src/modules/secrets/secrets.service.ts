@@ -48,12 +48,6 @@ export class SecretsService {
     await this.prisma.secret.delete({ where: { id } });
   }
 
-  // Solo para uso interno (worker de ejecuciones) — nunca exponer al frontend
-  async getDecryptedValue(id: string): Promise<string> {
-    const secret = await this.prisma.secret.findUniqueOrThrow({ where: { id } });
-    return this.vault.decrypt(secret.encryptedValue);
-  }
-
   private toResponse(s: {
     id: string; organizationId: string; name: string;
     type: import('@prisma/client').SecretType; description: string | null;

@@ -46,6 +46,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - artifacts:/artifacts
     networks:
       - e2e-net
 

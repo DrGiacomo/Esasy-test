@@ -5,4 +5,5 @@ export interface ExecutionJobData {
   projectId: string;
   orgId: string;
   suiteId?: string;
+  testId?: string;
 }

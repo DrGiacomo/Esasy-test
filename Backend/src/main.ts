@@ -1,11 +1,17 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.setGlobalPrefix('api/v1');
+  // Los artefactos NO se sirven como estáticos (los estáticos esquivan el JwtAuthGuard):
+  // los sirve ArtifactsController con auth + verificación de org, fuera del prefijo
+  // para preservar las URLs `/artifacts/...` ya almacenadas en la BD.
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['artifacts/:executionId/:filename'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

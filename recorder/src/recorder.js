@@ -6,118 +6,233 @@ const { io } = require('socket.io-client');
 const SESSION_ID = process.env.SESSION_ID;
 const TARGET_URL = process.env.TARGET_URL;
 const BACKEND_WS_URL = process.env.BACKEND_WS_URL || 'ws://backend:3000';
+const RECORDER_TOKEN = process.env.RECORDER_TOKEN;
 
 if (!SESSION_ID || !TARGET_URL) {
-  console.error('Missing required env vars: SESSION_ID, TARGET_URL');
+  process.stderr.write('Missing required env vars: SESSION_ID, TARGET_URL\n');
   process.exit(1);
 }
 
+function log(msg) {
+  process.stdout.write(`[recorder] ${msg}\n`);
+}
+
+// Se ejecuta DENTRO de la página. Computa un selector robusto para un elemento,
+// priorizando estrategias estables sobre rutas CSS frágiles:
+//   data-testid > id estable > aria-label > [name] > texto (botones/links) > css acotado.
+// Devuelve { selector, selectorType } o null. Compatible con los selector engines de
+// Playwright (text=, role no se usa aquí para evitar ambigüedad de nombre accesible).
+function buildSelectorInPage(el) {
+  if (!el || el.nodeType !== 1) return null;
+  const esc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&'));
+  const stableId = (v) => v && !/[:.]/.test(v) && !/\d{4,}/.test(v);
+
+  for (const attr of ['data-testid', 'data-test-id', 'data-test', 'data-cy', 'data-qa']) {
+    const v = el.getAttribute(attr);
+    if (v) return { selector: `[${attr}="${v}"]`, selectorType: 'testId' };
+  }
+
+  const id = el.getAttribute('id');
+  if (stableId(id)) return { selector: `#${esc(id)}`, selectorType: 'css' };
+
+  const aria = el.getAttribute('aria-label');
+  if (aria) return { selector: `[aria-label="${aria}"]`, selectorType: 'css' };
+
+  const tag = el.tagName.toLowerCase();
+  const name = el.getAttribute('name');
+  if (name) return { selector: `${tag}[name="${name}"]`, selectorType: 'css' };
+
+  const role = el.getAttribute('role');
+  const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
+  const isClickable = tag === 'button' || tag === 'a' || role === 'button' || el.type === 'submit';
+  if (isClickable && text && text.length <= 50) {
+    return { selector: `text="${text}"`, selectorType: 'text' };
+  }
+
+  let css = tag;
+  if (el.classList && el.classList.length) css += '.' + esc(el.classList[0]);
+  try {
+    if (document.querySelectorAll(css).length > 1 && el.parentElement) {
+      const parent = el.parentElement;
+      const sameTag = Array.prototype.filter.call(parent.children, (c) => c.tagName === el.tagName);
+      const idx = sameTag.indexOf(el) + 1;
+      css = `${tag}:nth-of-type(${idx})`;
+      const pid = parent.getAttribute('id');
+      if (stableId(pid)) css = `#${esc(pid)} > ${css}`;
+    }
+  } catch (_) {}
+  return { selector: css, selectorType: 'css' };
+}
+
 async function main() {
+  log(`Starting — session=${SESSION_ID} target=${TARGET_URL} ws=${BACKEND_WS_URL}`);
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1280,720',
+    ],
+  });
+
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const page = await context.newPage();
+
+  // Navigate immediately — don't wait for WS
+  log(`Navigating to ${TARGET_URL}`);
+  try {
+    await page.goto(TARGET_URL, { timeout: 30000, waitUntil: 'domcontentloaded' });
+    log(`Navigation complete: ${page.url()}`);
+  } catch (err) {
+    log(`Navigation warning (continuing): ${err.message}`);
+  }
+
   const socket = io(`${BACKEND_WS_URL}/recorder`, {
     transports: ['websocket'],
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: 10,
+    auth: { token: RECORDER_TOKEN },
   });
-
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-
-  const context = await browser.newContext();
-  const page = await context.newPage();
 
   function captureAction(step) {
     socket.emit('action:captured', { sessionId: SESSION_ID, step });
   }
 
-  // Capturar navegaciones automáticas
+  // Computa un selector robusto para el elemento en (x, y). Best-effort.
+  async function robustSelectorAt(x, y) {
+    try {
+      const handle = await page.evaluateHandle(({ x, y }) => document.elementFromPoint(x, y), { x, y });
+      const result = await page.evaluate(buildSelectorInPage, handle);
+      await handle.dispose();
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Reescribe un selector CSS crudo del frontend por uno más estable, si se puede resolver.
+  async function refineSelector(selector) {
+    try {
+      const handle = await page.$(selector);
+      if (!handle) return null;
+      const result = await handle.evaluate(buildSelectorInPage);
+      await handle.dispose();
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Capture automatic navigations
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) {
       captureAction({ type: 'navigate', url: frame.url() });
     }
   });
 
-  // Enviar frames al frontend a ~5fps
-  const frameInterval = setInterval(async () => {
-    try {
-      const screenshot = await page.screenshot({ type: 'jpeg', quality: 60 });
-      socket.emit('frame', {
-        sessionId: SESSION_ID,
-        timestamp: Date.now(),
-        data: screenshot.toString('base64'),
-      });
-    } catch (_) {}
-  }, 200);
+  let frameInterval = null;
 
-  // Recibir y ejecutar acciones desde el frontend (via gateway)
+  function startFrameStream() {
+    if (frameInterval) return;
+    log('Starting frame stream at ~5fps');
+    frameInterval = setInterval(async () => {
+      try {
+        const screenshot = await page.screenshot({ type: 'jpeg', quality: 60 });
+        socket.emit('frame', {
+          sessionId: SESSION_ID,
+          timestamp: Date.now(),
+          data: screenshot.toString('base64'),
+        });
+      } catch (_) {}
+    }, 200);
+  }
+
+  socket.on('connect', async () => {
+    log(`Connected to backend WS`);
+    socket.emit('session:join', { sessionId: SESSION_ID });
+    startFrameStream();
+  });
+
+  socket.on('connect_error', (err) => {
+    log(`WS connection error: ${err.message}`);
+  });
+
+  // Receive and execute actions from frontend
   socket.on('container:action', async (data) => {
-    const { type, selector, value, url, key } = data;
+    const { type, selector, value, url, key, x, y } = data;
+    log(`Action received: ${type} ${selector || url || key || (x !== undefined ? `(${x},${y})` : '')}`);
     try {
       if (type === 'navigate') {
         await page.goto(url);
         captureAction({ type, url });
-      } else if (type === 'click') {
-        await page.click(selector);
-        captureAction({ type, selector });
-      } else if (type === 'dblclick') {
-        await page.dblclick(selector);
-        captureAction({ type, selector });
+      } else if (type === 'click' || type === 'dblclick') {
+        if (x !== undefined && y !== undefined) {
+          // Resolver el selector ANTES de actuar: el click puede navegar y perder el DOM.
+          const robust = await robustSelectorAt(x, y);
+          await page.mouse[type](x, y);
+          captureAction(robust ? { type, ...robust } : { type, x, y });
+        } else {
+          const robust = await refineSelector(selector);
+          await page[type](selector);
+          captureAction(robust ? { type, ...robust } : { type, selector });
+        }
+      } else if (type === 'type') {
+        await page.keyboard.type(value ?? '');
+        captureAction({ type, value });
       } else if (type === 'fill') {
+        const robust = await refineSelector(selector);
         await page.fill(selector, value ?? '');
-        captureAction({ type, selector, value });
+        captureAction(robust ? { type, ...robust, value } : { type, selector, value });
       } else if (type === 'press') {
         await page.keyboard.press(key);
         captureAction({ type, key });
       } else if (type === 'hover') {
-        await page.hover(selector);
+        if (x !== undefined && y !== undefined) {
+          const robust = await robustSelectorAt(x, y);
+          await page.mouse.move(x, y);
+          if (robust) captureAction({ type, ...robust });
+        } else {
+          const robust = await refineSelector(selector);
+          await page.hover(selector);
+          captureAction(robust ? { type, ...robust } : { type, selector });
+        }
       } else if (type === 'select') {
+        const robust = await refineSelector(selector);
         await page.selectOption(selector, value ?? '');
-        captureAction({ type, selector, value });
+        captureAction(robust ? { type, ...robust, value } : { type, selector, value });
       }
     } catch (err) {
+      log(`Action error: ${err.message}`);
       socket.emit('action:error', { sessionId: SESSION_ID, message: String(err) });
     }
   });
 
-  socket.on('connect', async () => {
-    console.log(`[recorder] Connected to backend WS (session ${SESSION_ID})`);
-    socket.emit('session:join', { sessionId: SESSION_ID });
-    try {
-      await page.goto(TARGET_URL);
-      console.log(`[recorder] Navigated to ${TARGET_URL}`);
-    } catch (err) {
-      console.error(`[recorder] Failed to navigate: ${err}`);
-    }
-  });
-
-  socket.on('connect_error', (err) => {
-    console.error(`[recorder] WS connection error: ${err.message}`);
-  });
-
   async function cleanup() {
-    clearInterval(frameInterval);
+    if (frameInterval) clearInterval(frameInterval);
     socket.disconnect();
     await context.close().catch(() => null);
     await browser.close().catch(() => null);
   }
 
-  // Auto-expiración: 30 minutos
+  // Auto-expire: 30 minutes
   setTimeout(async () => {
-    console.log('[recorder] Session timeout — shutting down');
+    log('Session timeout — shutting down');
     await cleanup();
     process.exit(0);
   }, 30 * 60 * 1000);
 
   process.on('SIGTERM', async () => {
-    console.log('[recorder] SIGTERM received');
+    log('SIGTERM received');
     await cleanup();
     process.exit(0);
   });
 }
 
 main().catch((err) => {
-  console.error('[recorder] Fatal error:', err);
+  process.stderr.write(`[recorder] Fatal error: ${err}\n`);
   process.exit(1);
 });

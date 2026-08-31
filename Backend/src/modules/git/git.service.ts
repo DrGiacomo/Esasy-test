@@ -1,14 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { GitProvider } from '@prisma/client';
 import { VaultService } from '../../infrastructure/vault/vault.service';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGitIntegrationDto, GitIntegrationResponseDto } from './dto/git-integration.dto';
+import { GithubProvider } from './providers/github.provider';
+import { GitlabProvider } from './providers/gitlab.provider';
+import { GitProviderClient } from './providers/git-provider.interface';
 
 @Injectable()
 export class GitService {
+  private readonly logger = new Logger(GitService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly vault: VaultService,
+    private readonly github: GithubProvider,
+    private readonly gitlab: GitlabProvider,
   ) {}
 
   async create(dto: CreateGitIntegrationDto, user: JwtPayload): Promise<GitIntegrationResponseDto> {
@@ -53,16 +61,43 @@ export class GitService {
     });
     if (!integration) throw new NotFoundException('No active Git integration');
 
-    // TODO: implementar push al repositorio usando el token descifrado
-    // const token = this.vault.decrypt(integration.encryptedToken);
-    // await gitProvider.push(token, integration.repoUrl, integration.syncPath, test);
+    const token = this.vault.decrypt(integration.encryptedToken);
+    const filePath = this.buildFilePath(integration.syncPath, test.name);
+    const client = this.providerFor(integration.provider);
+
+    const result = await client.pushFile({
+      token,
+      repoUrl: integration.repoUrl,
+      branch: integration.defaultBranch,
+      filePath,
+      content: test.generatedCode,
+      commitMessage: `chore(e2e): sync "${test.name}" [${testId}]`,
+    });
 
     await this.prisma.gitIntegration.update({
       where: { id: integration.id },
       data: { lastSyncedAt: new Date() },
     });
 
-    return { message: `Sync queued for test ${testId}` };
+    this.logger.log(`Synced test ${testId} → ${integration.provider} ${integration.repoUrl}:${filePath}`);
+    return { message: result.commitUrl ? `Synced: ${result.commitUrl}` : `Synced ${filePath}` };
+  }
+
+  private providerFor(provider: GitProvider): GitProviderClient {
+    return provider === GitProvider.GITLAB ? this.gitlab : this.github;
+  }
+
+  /** Combina syncPath + nombre del test saneado en una ruta `*.spec.ts` segura. */
+  private buildFilePath(syncPath: string, testName: string): string {
+    const dir = syncPath.replace(/^\/+|\/+$/g, '');
+    const slug =
+      testName
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || 'test';
+    return `${dir ? `${dir}/` : ''}${slug}.spec.ts`;
   }
 
   private toResponse(g: {
