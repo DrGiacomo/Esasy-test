@@ -5,7 +5,7 @@ function buildMocks() {
   const ai = { complete: jest.fn() };
   const prisma = { project: { findUniqueOrThrow: jest.fn(), findFirst: jest.fn() } };
   const audit = { log: jest.fn().mockResolvedValue(undefined) };
-  const service = new NlToFlowService(ai as never, prisma as never, audit as never);
+  const service = new NlToFlowService(ai, prisma as never, audit as never);
   return { ai, prisma, audit, service };
 }
 
@@ -39,6 +39,8 @@ describe('NlToFlowService — multi-tenant', () => {
     prisma.project.findFirst.mockResolvedValue({ id: 'proj-1', baseUrl: 'https://app.test' });
     ai.complete.mockResolvedValue({ content: 'not json at all' });
 
-    await expect(service.convert('go', 'proj-1', 'user-1', 'org-1')).rejects.toThrow(/malformed JSON/i);
+    await expect(service.convert('go', 'proj-1', 'user-1', 'org-1')).rejects.toThrow(
+      /malformed JSON/i,
+    );
   });
 });

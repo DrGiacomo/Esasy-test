@@ -18,14 +18,19 @@ export default function FlowEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const { steps, setSteps, selected, selectStep, updateStep, removeStep, reorder } = useFlowEditor([]);
+  const { steps, setSteps, selected, selectStep, updateStep, removeStep, reorder } = useFlowEditor(
+    [],
+  );
 
   useEffect(() => {
     if (!testId) return;
-    testsApi.getOne(testId).then((t) => {
-      setTest(t);
-      setSteps([...t.steps].sort((a, b) => a.order - b.order));
-    }).finally(() => setLoading(false));
+    testsApi
+      .getOne(testId)
+      .then((t) => {
+        setTest(t);
+        setSteps([...t.steps].sort((a, b) => a.order - b.order));
+      })
+      .finally(() => setLoading(false));
   }, [testId, setSteps]);
 
   async function addStep(action: string) {
@@ -41,14 +46,28 @@ export default function FlowEditorPage() {
     if (!testId) return;
     setSaving(true);
     try {
-      await testsApi.reorderSteps(testId, steps.map((s) => ({ stepId: s.id, order: s.order })));
+      await testsApi.reorderSteps(
+        testId,
+        steps.map((s) => ({ stepId: s.id, order: s.order })),
+      );
       for (const step of steps) {
-        await testsApi.updateStep(testId, step.id, { selector: step.selector ?? undefined, value: step.value ?? undefined, description: step.description ?? undefined });
+        await testsApi.updateStep(testId, step.id, {
+          selector: step.selector ?? undefined,
+          value: step.value ?? undefined,
+          description: step.description ?? undefined,
+        });
       }
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (loading) return <div className="flex h-full items-center justify-center"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   if (!test) return <p>Test no encontrado</p>;
 
   return (
@@ -81,7 +100,9 @@ export default function FlowEditorPage() {
         />
         <StepInspector
           step={selected}
-          onChange={(changes) => { if (selected) updateStep(selected.id, changes); }}
+          onChange={(changes) => {
+            if (selected) updateStep(selected.id, changes);
+          }}
         />
       </div>
 

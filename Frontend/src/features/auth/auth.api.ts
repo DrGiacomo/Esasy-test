@@ -1,9 +1,22 @@
 import { api } from '@/lib/api/axios.client';
 import type { MemberRole, UiMode } from '@/types/models';
 
-export interface LoginDto { email: string; password: string; orgId?: string }
-export interface RegisterDto { email: string; password: string; displayName: string; organizationName: string }
-export interface AuthTokens { accessToken: string; refreshToken: string; expiresIn: number }
+export interface LoginDto {
+  email: string;
+  password: string;
+  orgId?: string;
+}
+export interface RegisterDto {
+  email: string;
+  password: string;
+  displayName: string;
+  organizationName: string;
+}
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
 
 /**
  * Quien soy. Antes esto se sacaba descodificando el JWT, y de ahi venia el

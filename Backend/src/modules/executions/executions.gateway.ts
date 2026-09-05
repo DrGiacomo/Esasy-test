@@ -15,7 +15,28 @@ import { JwtService } from '@nestjs/jwt';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 
-@WebSocketGateway({ namespace: '/executions', cors: { origin: process.env.CORS_ORIGIN ?? '*' }, pingInterval: 10000, pingTimeout: 60000 })
+/**
+ * Lo que este gateway guarda en `client.data`. Sin tipar, `client.data` es `any` y
+ * `.user` no se comprueba — ni siquiera que el nombre del campo este bien escrito.
+ */
+interface DatosSocket {
+  user?: JwtPayload;
+}
+
+/** El socket de este gateway, con su `data` tipado. */
+type SocketEjecucion = Socket<
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  DatosSocket
+>;
+
+@WebSocketGateway({
+  namespace: '/executions',
+  cors: { origin: process.env.CORS_ORIGIN ?? '*' },
+  pingInterval: 10000,
+  pingTimeout: 60000,
+})
 export class ExecutionsGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit, OnModuleDestroy
 {
@@ -49,7 +70,7 @@ export class ExecutionsGateway
     await this.subscriber?.disconnect();
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(client: SocketEjecucion) {
     const user = this.authenticate(client);
     if (!user) {
       this.logger.debug(`Rejecting unauthenticated client: ${client.id}`);
@@ -60,16 +81,16 @@ export class ExecutionsGateway
     this.logger.debug(`Client connected: ${client.id} (org ${user.orgId})`);
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: SocketEjecucion) {
     this.logger.debug(`Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('execution:subscribe')
   async handleSubscribe(
     @MessageBody() data: { executionId: string },
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: SocketEjecucion,
   ) {
-    const user = client.data.user as JwtPayload | undefined;
+    const user = client.data.user;
     if (!user || !(await this.ownsExecution(data.executionId, user.orgId))) {
       this.logger.warn(`Denied subscribe to ${data?.executionId} for client ${client.id}`);
       return;
@@ -80,13 +101,13 @@ export class ExecutionsGateway
   @SubscribeMessage('execution:unsubscribe')
   handleUnsubscribe(
     @MessageBody() data: { executionId: string },
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: SocketEjecucion,
   ) {
     void client.leave(`execution:${data.executionId}`);
   }
 
   /** Verifica el JWT del handshake. Devuelve el payload o null si es inválido. */
-  private authenticate(client: Socket): JwtPayload | null {
+  private authenticate(client: SocketEjecucion): JwtPayload | null {
     const token =
       (client.handshake.auth?.token as string | undefined) ??
       client.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');

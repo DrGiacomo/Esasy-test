@@ -4,7 +4,11 @@ import { describeStep, technicalDetail } from '@/lib/describe-step';
 import { useUiMode } from '@/hooks/useUiMode';
 import { testsApi } from '../tests.api';
 
-interface Props { steps: TestStep[]; testId: string; onUpdate: () => void }
+interface Props {
+  steps: TestStep[];
+  testId: string;
+  onUpdate: () => void;
+}
 
 const ACTION_LABELS: Record<string, string> = {
   navigate: 'Navegar',
@@ -29,7 +33,11 @@ export function StepList({ steps, testId, onUpdate }: Props) {
   }
 
   if (steps.length === 0) {
-    return <p className="text-sm text-gray-400">Sin pasos. Usa el editor visual o el grabador para añadir pasos.</p>;
+    return (
+      <p className="text-sm text-gray-400">
+        Sin pasos. Usa el editor visual o el grabador para añadir pasos.
+      </p>
+    );
   }
 
   return (
@@ -40,7 +48,9 @@ export function StepList({ steps, testId, onUpdate }: Props) {
           <div key={step.id} className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
             <div className="flex items-center gap-3">
               <span className="w-6 text-center text-xs font-mono text-gray-400">{i + 1}</span>
-              <span className="w-24 font-medium text-indigo-600">{ACTION_LABELS[step.action] ?? step.action}</span>
+              <span className="w-24 font-medium text-indigo-600">
+                {ACTION_LABELS[step.action] ?? step.action}
+              </span>
               {/*
                 En SENCILLO se cuenta el paso como una frase; en COMPLEJO se mantiene
                 exactamente lo de antes, el selector en monoespaciada.

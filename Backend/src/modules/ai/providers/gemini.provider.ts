@@ -15,6 +15,21 @@ interface GeminiPart {
  * visual de fallos y para potenciar el self-healing con el screenshot del error.
  * Convive con DeepSeek (texto): este provider se cablea bajo VISION_PROVIDER.
  */
+/**
+ * Forma de la respuesta de `generateContent` de Gemini.
+ *
+ * Igual que en `deepseek.provider.ts`: `axios.post` sin tipo devuelve `any`, y con `any`
+ * TypeScript deja de comprobar todo lo que cuelga. Eran 14 avisos de `no-unsafe-*` aqui,
+ * el archivo con mas del backend.
+ *
+ * Opcional de arriba abajo a proposito: describe lo que la API suele devolver, no lo que
+ * garantiza. Las comprobaciones siguen haciendo falta.
+ */
+interface RespuestaGenerate {
+  candidates?: { content?: { parts?: GeminiPart[] } }[];
+  usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+}
+
 @Injectable()
 export class GeminiProvider implements AiProvider {
   private readonly logger = new Logger(GeminiProvider.name);
@@ -23,7 +38,10 @@ export class GeminiProvider implements AiProvider {
   private readonly defaultModel: string;
 
   constructor(private readonly config: ConfigService) {
-    this.baseUrl = config.get<string>('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com');
+    this.baseUrl = config.get<string>(
+      'GEMINI_BASE_URL',
+      'https://generativelanguage.googleapis.com',
+    );
     this.apiKey = config.get<string>('GEMINI_API_KEY', '');
     this.defaultModel = config.get<string>('GEMINI_MODEL', 'gemini-2.0-flash');
   }
@@ -38,7 +56,9 @@ export class GeminiProvider implements AiProvider {
     options: AiCompleteOptions = {},
   ): Promise<AiResponse> {
     if (!this.apiKey) {
-      throw new ServiceUnavailableException('Gemini provider is not configured (missing GEMINI_API_KEY)');
+      throw new ServiceUnavailableException(
+        'Gemini provider is not configured (missing GEMINI_API_KEY)',
+      );
     }
     const start = Date.now();
 
@@ -70,11 +90,15 @@ export class GeminiProvider implements AiProvider {
     try {
       response = await withRetry(
         () =>
-          axios.post(`${this.baseUrl}/v1beta/models/${model}:generateContent`, body, {
-            params: { key: this.apiKey },
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 45000,
-          }),
+          axios.post<RespuestaGenerate>(
+            `${this.baseUrl}/v1beta/models/${model}:generateContent`,
+            body,
+            {
+              params: { key: this.apiKey },
+              headers: { 'Content-Type': 'application/json' },
+              timeout: 45000,
+            },
+          ),
         isRetryableHttpError,
       );
     } catch (err) {
@@ -84,7 +108,7 @@ export class GeminiProvider implements AiProvider {
 
     const candidate = response.data?.candidates?.[0];
     const content: string = (candidate?.content?.parts ?? [])
-      .map((p: GeminiPart) => p.text ?? '')
+      .map((p) => p.text ?? '')
       .join('')
       .trim();
     if (!content) {
@@ -95,8 +119,8 @@ export class GeminiProvider implements AiProvider {
     const usage = response.data.usageMetadata ?? {};
     return {
       content,
-      inputTokens: (usage.promptTokenCount as number) ?? 0,
-      outputTokens: (usage.candidatesTokenCount as number) ?? 0,
+      inputTokens: usage.promptTokenCount ?? 0,
+      outputTokens: usage.candidatesTokenCount ?? 0,
       latencyMs: Date.now() - start,
       modelUsed: model,
     };

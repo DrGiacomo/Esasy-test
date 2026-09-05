@@ -3,7 +3,10 @@ import { Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useAiAssistant } from '../hooks/useAiAssistant';
 
-interface Props { projectId: string; onGenerated: (steps: unknown[]) => void }
+interface Props {
+  projectId: string;
+  onGenerated: (steps: unknown[]) => void;
+}
 
 export function NlToFlowInput({ projectId, onGenerated }: Props) {
   const [prompt, setPrompt] = useState('');
@@ -13,11 +16,17 @@ export function NlToFlowInput({ projectId, onGenerated }: Props) {
     e.preventDefault();
     if (!prompt.trim()) return;
     const steps = await nlToFlow(prompt, projectId);
-    if (steps) { onGenerated(steps); setPrompt(''); }
+    if (steps) {
+      onGenerated(steps);
+      setPrompt('');
+    }
   }
 
   return (
-    <form onSubmit={(e) => void handle(e)} className="flex gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+    <form
+      onSubmit={(e) => void handle(e)}
+      className="flex gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3"
+    >
       <Wand2 size={18} className="mt-1 flex-shrink-0 text-indigo-500" />
       <textarea
         value={prompt}

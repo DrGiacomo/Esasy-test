@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -15,10 +10,7 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto';
 export class OrganizationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    dto: CreateOrganizationDto,
-    userId: string,
-  ): Promise<OrganizationResponseDto> {
+  async create(dto: CreateOrganizationDto, userId: string): Promise<OrganizationResponseDto> {
     const slug = await this.uniqueSlug(dto.name);
 
     const result = await this.prisma.$transaction(async (tx) => {

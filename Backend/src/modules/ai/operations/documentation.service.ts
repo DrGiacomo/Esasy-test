@@ -25,7 +25,11 @@ export class DocumentationService {
     private readonly audit: AiAuditService,
   ) {}
 
-  async generate(testId: string, userId: string, orgId: string): Promise<{ documentation: string; documentedAt: Date }> {
+  async generate(
+    testId: string,
+    userId: string,
+    orgId: string,
+  ): Promise<{ documentation: string; documentedAt: Date }> {
     // El filtro por organización va en el mismo where, como en el resto de operaciones:
     // un testId de otra org tiene que ser indistinguible de uno que no existe.
     const test = await this.prisma.test.findFirst({
@@ -56,9 +60,21 @@ export class DocumentationService {
     let result;
     try {
       result = await this.ai.complete(messages);
-      await this.audit.log(userId, AiOperationType.DOCUMENTATION, `Documentation for test: ${test.name}`, result, testId);
+      await this.audit.log(
+        userId,
+        AiOperationType.DOCUMENTATION,
+        `Documentation for test: ${test.name}`,
+        result,
+        testId,
+      );
     } catch (err) {
-      await this.audit.log(userId, AiOperationType.DOCUMENTATION, `Documentation for test: ${test.name}`, { error: String(err) }, testId);
+      await this.audit.log(
+        userId,
+        AiOperationType.DOCUMENTATION,
+        `Documentation for test: ${test.name}`,
+        { error: String(err) },
+        testId,
+      );
       throw err;
     }
 

@@ -12,7 +12,11 @@ export function CodePreviewPanel({ code }: { code: string | null }) {
       >
         <Code2 size={14} />
         <span>Código TypeScript (Power Users)</span>
-        {open ? <ChevronDown size={14} className="ml-auto" /> : <ChevronUp size={14} className="ml-auto" />}
+        {open ? (
+          <ChevronDown size={14} className="ml-auto" />
+        ) : (
+          <ChevronUp size={14} className="ml-auto" />
+        )}
       </button>
       {open && (
         <pre className="max-h-64 overflow-auto bg-gray-900 p-4 text-xs text-gray-100">

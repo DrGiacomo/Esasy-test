@@ -8,7 +8,9 @@ function build() {
     gitIntegration: { findFirst: jest.fn(), update: jest.fn() },
   };
   const vault = { decrypt: jest.fn(() => 'plain-token') };
-  const github = { pushFile: jest.fn().mockResolvedValue({ committed: true, commitUrl: 'https://gh/commit/1' }) };
+  const github = {
+    pushFile: jest.fn().mockResolvedValue({ committed: true, commitUrl: 'https://gh/commit/1' }),
+  };
   const gitlab = { pushFile: jest.fn().mockResolvedValue({ committed: true }) };
   const service = new GitService(prisma as never, vault as never, github as never, gitlab as never);
   return { prisma, vault, github, gitlab, service };
@@ -38,7 +40,11 @@ describe('GitService.sync', () => {
 
   it('pushea a GitHub con ruta saneada y actualiza lastSyncedAt', async () => {
     const { prisma, vault, github, service } = build();
-    prisma.test.findFirst.mockResolvedValue({ id: 't1', name: 'Iniciar Sesión!', generatedCode: 'export const x=1' });
+    prisma.test.findFirst.mockResolvedValue({
+      id: 't1',
+      name: 'Iniciar Sesión!',
+      generatedCode: 'export const x=1',
+    });
     prisma.gitIntegration.findFirst.mockResolvedValue({
       id: 'gi1',
       provider: GitProvider.GITHUB,

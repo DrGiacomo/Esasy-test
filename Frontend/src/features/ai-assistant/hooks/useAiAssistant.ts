@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { api } from '@/lib/api/axios.client';
 
-export interface ChatMessage { role: 'user' | 'assistant'; content: string }
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 export function useAiAssistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -12,11 +15,18 @@ export function useAiAssistant() {
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
     try {
-      const res = await api.post<{ content: string }>('/ai/chat', { messages: [...messages, userMsg] });
+      const res = await api.post<{ content: string }>('/ai/chat', {
+        messages: [...messages, userMsg],
+      });
       setMessages((prev) => [...prev, { role: 'assistant', content: res.data.content }]);
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: 'Error al procesar la respuesta.' }]);
-    } finally { setLoading(false); }
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Error al procesar la respuesta.' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function nlToFlow(prompt: string, projectId: string) {
@@ -24,7 +34,9 @@ export function useAiAssistant() {
     try {
       const res = await api.post<unknown[]>('/ai/nl-to-flow', { prompt, projectId });
       return res.data;
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return { messages, loading, sendMessage, nlToFlow };

@@ -16,15 +16,22 @@ export default function RecorderPage() {
   const [starting, setStopping] = useState(false);
   const { projects, loading: loadingProjects } = useProjects();
 
-  const { frame, capturedSteps, connected, performAction } = useRecorderSocket(session?.sessionId ?? null);
+  const { frame, capturedSteps, connected, performAction } = useRecorderSocket(
+    session?.sessionId ?? null,
+  );
 
   async function startSession() {
     if (!targetUrl || !selectedProjectId) return;
     setStopping(true);
     try {
-      const res = await api.post<RecorderSession>('/recorder/sessions', { targetUrl, projectId: selectedProjectId });
+      const res = await api.post<RecorderSession>('/recorder/sessions', {
+        targetUrl,
+        projectId: selectedProjectId,
+      });
       setSession(res.data);
-    } finally { setStopping(false); }
+    } finally {
+      setStopping(false);
+    }
   }
 
   async function stopSession() {
@@ -33,7 +40,9 @@ export default function RecorderPage() {
     try {
       await api.delete(`/recorder/sessions/${session.sessionId}`);
       setSession(null);
-    } finally { setStopping(false); }
+    } finally {
+      setStopping(false);
+    }
   }
 
   function handleNavigate(url: string) {
@@ -47,7 +56,8 @@ export default function RecorderPage() {
         <div className="w-full max-w-md space-y-4">
           <h1 className="text-xl font-bold text-gray-900 text-center">Grabador de pruebas</h1>
           <p className="text-sm text-gray-500 text-center">
-            Ingresa la URL de la aplicación que quieres grabar. El navegador remoto se abrirá y tus acciones se convertirán en pasos de prueba automáticamente.
+            Ingresa la URL de la aplicación que quieres grabar. El navegador remoto se abrirá y tus
+            acciones se convertirán en pasos de prueba automáticamente.
           </p>
           <div className="space-y-3">
             <select
@@ -60,7 +70,9 @@ export default function RecorderPage() {
                 {loadingProjects ? 'Cargando proyectos…' : 'Selecciona un proyecto'}
               </option>
               {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
               ))}
             </select>
             <div className="flex gap-2">
@@ -107,7 +119,9 @@ export default function RecorderPage() {
           {capturedSteps.map((step, i) => (
             <div key={i} className="rounded bg-gray-800 px-3 py-2 text-xs text-gray-300">
               <span className="font-medium text-indigo-400">{step.type}</span>
-              {step.selector && <span className="ml-1 text-gray-500 font-mono truncate">{step.selector}</span>}
+              {step.selector && (
+                <span className="ml-1 text-gray-500 font-mono truncate">{step.selector}</span>
+              )}
             </div>
           ))}
         </div>

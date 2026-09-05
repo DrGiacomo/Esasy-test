@@ -2,14 +2,18 @@ import { useState } from 'react';
 import type { TestStep } from '@/types/models';
 
 export function useFlowEditor(initialSteps: TestStep[]) {
-  const [steps, setSteps] = useState<TestStep[]>([...initialSteps].sort((a, b) => a.order - b.order));
+  const [steps, setSteps] = useState<TestStep[]>(
+    [...initialSteps].sort((a, b) => a.order - b.order),
+  );
   const [selected, setSelected] = useState<TestStep | null>(null);
 
-  function selectStep(step: TestStep | null) { setSelected(step); }
+  function selectStep(step: TestStep | null) {
+    setSelected(step);
+  }
 
   function updateStep(id: string, changes: Partial<TestStep>) {
     setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...changes } : s)));
-    if (selected?.id === id) setSelected((s) => s ? { ...s, ...changes } : s);
+    if (selected?.id === id) setSelected((s) => (s ? { ...s, ...changes } : s));
   }
 
   function removeStep(id: string) {

@@ -1,0 +1,28 @@
+# Normaliza los finales de linea en el repositorio.
+#
+# Sin esto, git guardaba lo que cada maquina escribiera y prettier veia CRLF donde
+# esperaba LF: 450 errores de formato en todo el repo, imposibles de arreglar de forma
+# duradera y por los que el lint llevaba desde junio fuera del CI. La causa no eran los
+# archivos: era que nadie declaro cual es el final de linea del proyecto.
+#
+# `text=auto eol=lf` -> en el repositorio siempre LF; en el disco, lo que toque.
+* text=auto eol=lf
+
+# Binarios: que git no los toque nunca.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webm binary
+*.zip  binary
+*.exe  binary
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+
+# Los .bat los ejecuta cmd.exe, que necesita CRLF de verdad.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Los scripts que corren dentro de los contenedores Linux, LF siempre.
+*.sh text eol=lf

@@ -34,25 +34,24 @@ describe('withRetry', () => {
   });
 
   it('reintenta y luego tiene éxito', async () => {
-    const fn = jest
-      .fn()
-      .mockRejectedValueOnce(axiosErrorWithStatus(503))
-      .mockResolvedValue('ok');
+    const fn = jest.fn().mockRejectedValueOnce(axiosErrorWithStatus(503)).mockResolvedValue('ok');
     expect(await withRetry(fn, isRetryableHttpError, { baseDelayMs: 0 })).toBe('ok');
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
   it('agota los reintentos y propaga el error', async () => {
     const fn = jest.fn().mockRejectedValue(axiosErrorWithStatus(503));
-    await expect(withRetry(fn, isRetryableHttpError, { retries: 2, baseDelayMs: 0 })).rejects.toBeInstanceOf(
-      AxiosError,
-    );
+    await expect(
+      withRetry(fn, isRetryableHttpError, { retries: 2, baseDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(AxiosError);
     expect(fn).toHaveBeenCalledTimes(3); // 1 + 2 reintentos
   });
 
   it('no reintenta un error no-reintentable', async () => {
     const fn = jest.fn().mockRejectedValue(axiosErrorWithStatus(400));
-    await expect(withRetry(fn, isRetryableHttpError, { baseDelayMs: 0 })).rejects.toBeInstanceOf(AxiosError);
+    await expect(withRetry(fn, isRetryableHttpError, { baseDelayMs: 0 })).rejects.toBeInstanceOf(
+      AxiosError,
+    );
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });

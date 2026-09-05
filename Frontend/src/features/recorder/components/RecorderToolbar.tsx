@@ -26,7 +26,9 @@ export function RecorderToolbar({ onNavigate, onStop, loading }: Props) {
           placeholder="https://..."
           className="flex-1 rounded bg-gray-700 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
-        <Button size="sm" type="submit" disabled={loading}>Ir</Button>
+        <Button size="sm" type="submit" disabled={loading}>
+          Ir
+        </Button>
       </form>
       <Button variant="danger" size="sm" onClick={onStop} loading={loading}>
         <Square size={14} />

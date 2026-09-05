@@ -18,7 +18,8 @@ export function MembersPanel() {
 
   useEffect(() => {
     if (!user) return;
-    api.get<{ members: Membership[] }>(`/organizations/${user.orgId}`)
+    api
+      .get<{ members: Membership[] }>(`/organizations/${user.orgId}`)
       .then((r) => setMembers(r.data.members ?? []))
       .finally(() => setLoading(false));
   }, [user]);
@@ -31,14 +32,23 @@ export function MembersPanel() {
       await api.post(`/organizations/${user.orgId}/members`, { email: inviteEmail });
       setShowInvite(false);
       setInviteEmail('');
-    } finally { setInviting(false); }
+    } finally {
+      setInviting(false);
+    }
   }
 
   const roleColor: Record<string, 'indigo' | 'gray' | 'emerald'> = {
-    ADMIN: 'indigo', EDITOR: 'emerald', VIEWER: 'gray',
+    ADMIN: 'indigo',
+    EDITOR: 'emerald',
+    VIEWER: 'gray',
   };
 
-  if (loading) return <div className="flex justify-center py-8"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-8">
+        <LoadingSpinner />
+      </div>
+    );
 
   return (
     <div>
@@ -51,9 +61,14 @@ export function MembersPanel() {
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
         {members.map((m, i) => (
-          <div key={m.id} className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+          <div
+            key={m.id}
+            className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+          >
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800">{m.user?.displayName ?? m.user?.email}</p>
+              <p className="text-sm font-medium text-gray-800">
+                {m.user?.displayName ?? m.user?.email}
+              </p>
               <p className="text-xs text-gray-500">{m.user?.email}</p>
             </div>
             <Badge label={m.role} color={roleColor[m.role] ?? 'gray'} />
@@ -72,8 +87,12 @@ export function MembersPanel() {
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
           />
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" type="button" onClick={() => setShowInvite(false)}>Cancelar</Button>
-            <Button type="submit" loading={inviting}>Invitar</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowInvite(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={inviting}>
+              Invitar
+            </Button>
           </div>
         </form>
       </Modal>

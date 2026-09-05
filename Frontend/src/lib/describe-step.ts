@@ -35,7 +35,9 @@ export function describeAction(action: string): string {
   return ACCIONES[action] ?? action;
 }
 
-export function describeStep(step: Pick<TestStep, 'action' | 'selector' | 'value' | 'description'>): string {
+export function describeStep(
+  step: Pick<TestStep, 'action' | 'selector' | 'value' | 'description'>,
+): string {
   if (step.description) return step.description;
 
   const verbo = ACCIONES[step.action] ?? step.action;
@@ -62,7 +64,9 @@ export function describeStep(step: Pick<TestStep, 'action' | 'selector' | 'value
  * El detalle técnico de un paso, para el desplegable «ver detalle técnico».
  * `null` cuando no hay nada que enseñar — entonces no se pinta el desplegable.
  */
-export function technicalDetail(step: Pick<TestStep, 'action' | 'selector' | 'selectorType' | 'value'>): string | null {
+export function technicalDetail(
+  step: Pick<TestStep, 'action' | 'selector' | 'selectorType' | 'value'>,
+): string | null {
   const partes: string[] = [`acción: ${step.action}`];
   if (step.selector) partes.push(`selector: ${step.selector}`);
   if (step.selectorType) partes.push(`tipo: ${step.selectorType}`);

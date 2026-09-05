@@ -23,8 +23,8 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
 
   function toRemoteCoords(e: React.MouseEvent<HTMLImageElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width)  * REMOTE_W);
-    const y = Math.round(((e.clientY - rect.top)  / rect.height) * REMOTE_H);
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * REMOTE_W);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * REMOTE_H);
     return { x, y };
   }
 
@@ -47,10 +47,31 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
     e.preventDefault();
 
     const specialKeys = [
-      'Enter', 'Backspace', 'Tab', 'Escape', 'Delete',
-      'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-      'Home', 'End', 'PageUp', 'PageDown',
-      'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12',
+      'Enter',
+      'Backspace',
+      'Tab',
+      'Escape',
+      'Delete',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+      'PageUp',
+      'PageDown',
+      'F1',
+      'F2',
+      'F3',
+      'F4',
+      'F5',
+      'F6',
+      'F7',
+      'F8',
+      'F9',
+      'F10',
+      'F11',
+      'F12',
     ];
 
     if (specialKeys.includes(e.key)) {
@@ -84,9 +105,7 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
           draggable={false}
         />
       ) : (
-        connected && (
-          <p className="text-sm text-gray-500">Sin señal de video… esperando frames</p>
-        )
+        connected && <p className="text-sm text-gray-500">Sin señal de video… esperando frames</p>
       )}
 
       {/* Hint */}

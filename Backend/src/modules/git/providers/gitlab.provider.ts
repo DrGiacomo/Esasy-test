@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { GitProviderClient, GitPushOptions, GitPushResult } from './git-provider.interface';
@@ -43,7 +48,11 @@ export class GitlabProvider implements GitProviderClient {
     }
   }
 
-  private async fileExists(url: string, branch: string, headers: Record<string, string>): Promise<boolean> {
+  private async fileExists(
+    url: string,
+    branch: string,
+    headers: Record<string, string>,
+  ): Promise<boolean> {
     try {
       await axios.get(url, { headers, params: { ref: branch }, timeout: 20000 });
       return true;

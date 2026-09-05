@@ -9,7 +9,10 @@ export class ArtifactCollectorService {
 
   constructor(private readonly config: ConfigService) {}
 
-  getArtifactUrls(executionId: string, testId: string): {
+  getArtifactUrls(
+    executionId: string,
+    testId: string,
+  ): {
     screenshotUrl: string | null;
     videoUrl: string | null;
     traceUrl: string | null;
@@ -21,7 +24,9 @@ export class ArtifactCollectorService {
     const tracePath = path.join(base, executionId, `${testId}.zip`);
 
     return {
-      screenshotUrl: fs.existsSync(screenshotPath) ? `/artifacts/${executionId}/${testId}_final.png` : null,
+      screenshotUrl: fs.existsSync(screenshotPath)
+        ? `/artifacts/${executionId}/${testId}_final.png`
+        : null,
       videoUrl: fs.existsSync(videoPath) ? `/artifacts/${executionId}/${testId}.webm` : null,
       traceUrl: fs.existsSync(tracePath) ? `/artifacts/${executionId}/${testId}.zip` : null,
     };

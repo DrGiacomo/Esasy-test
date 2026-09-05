@@ -33,7 +33,7 @@ describe('ExecutionsService — multi-tenant', () => {
     prisma.project.findFirst.mockResolvedValue({ id: 'proj-1' });
     prisma.execution.create.mockResolvedValue({ id: 'exec-1', status: ExecutionStatus.QUEUED });
 
-    await service.trigger({ projectId: 'proj-1' } as never, user);
+    await service.trigger({ projectId: 'proj-1' }, user);
 
     expect(prisma.project.findFirst).toHaveBeenCalledWith({
       where: { id: 'proj-1', organizationId: 'org-1' },
@@ -50,7 +50,7 @@ describe('ExecutionsService — multi-tenant', () => {
     const { prisma, queue, service } = buildMocks();
     prisma.project.findFirst.mockResolvedValue(null); // no visible para esta org
 
-    await expect(service.trigger({ projectId: 'proj-1' } as never, otherOrgUser)).rejects.toBeInstanceOf(
+    await expect(service.trigger({ projectId: 'proj-1' }, otherOrgUser)).rejects.toBeInstanceOf(
       NotFoundException,
     );
     expect(prisma.execution.create).not.toHaveBeenCalled();
@@ -102,7 +102,11 @@ describe('ExecutionsService — cancel', () => {
     expect(prisma.execution.delete).not.toHaveBeenCalled();
   });
 
-  const terminalStatuses = [ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED];
+  const terminalStatuses = [
+    ExecutionStatus.COMPLETED,
+    ExecutionStatus.FAILED,
+    ExecutionStatus.CANCELLED,
+  ];
 
   it.each(terminalStatuses)('hard-deletes terminal status %s', async (status) => {
     const { prisma, queue, service } = buildMocks();

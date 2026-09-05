@@ -4,6 +4,23 @@ import axios from 'axios';
 import { AiCompleteOptions, AiMessage, AiProvider, AiResponse } from './ai-provider.interface';
 import { isRetryableHttpError, withRetry } from '../util/retry';
 
+/**
+ * Forma de la respuesta de DeepSeek (compatible con la API de chat de OpenAI).
+ *
+ * Se declara aquí y no se da por supuesta porque `axios.post` sin tipo devuelve `any`, y
+ * con `any` TypeScript deja de comprobar TODO lo que cuelga de él: `data.choices[0].message`
+ * pasa el compilador aunque la API cambie de forma. Eran 8 avisos de `no-unsafe-*` en este
+ * archivo, y son exactamente el patrón que la auditoría del 2026-06-15 marcó como dominante
+ * («parsing/validación frágil de respuestas de DeepSeek»).
+ *
+ * Todo es opcional a propósito: esto describe lo que la API *suele* devolver, no lo que
+ * garantiza. Las comprobaciones de abajo siguen siendo obligatorias.
+ */
+interface RespuestaChat {
+  choices?: { message?: { content?: unknown } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
 @Injectable()
 export class DeepSeekProvider implements AiProvider {
   private readonly logger = new Logger(DeepSeekProvider.name);
@@ -36,7 +53,7 @@ export class DeepSeekProvider implements AiProvider {
       // Reintentos con backoff ante 429/5xx/timeout — un pico transitorio no debe tumbar la operación.
       response = await withRetry(
         () =>
-          axios.post(`${this.baseUrl}/v1/chat/completions`, body, {
+          axios.post<RespuestaChat>(`${this.baseUrl}/v1/chat/completions`, body, {
             headers: {
               Authorization: `Bearer ${this.apiKey}`,
               'Content-Type': 'application/json',
@@ -60,8 +77,8 @@ export class DeepSeekProvider implements AiProvider {
     const usage = response.data.usage ?? {};
     return {
       content,
-      inputTokens: (usage.prompt_tokens as number) ?? 0,
-      outputTokens: (usage.completion_tokens as number) ?? 0,
+      inputTokens: usage.prompt_tokens ?? 0,
+      outputTokens: usage.completion_tokens ?? 0,
       latencyMs: Date.now() - start,
       modelUsed: model,
     };

@@ -124,16 +124,21 @@ export class ExecutionProcessor extends WorkerHost {
 
       // Self-healing automático: propone fixes para los steps que fallaron. No bloquea
       // el cierre de la ejecución ante un error en la IA (best-effort).
-      await this.autoHealing.run(executionId, orgId).catch((e) =>
-        this.logger.error(`Auto-healing falló para ${executionId}: ${String(e)}`),
-      );
+      await this.autoHealing
+        .run(executionId, orgId)
+        .catch((e) => this.logger.error(`Auto-healing falló para ${executionId}: ${String(e)}`));
 
       if (outcome.aborted === 'timeout') {
-        await this.failExecution(publisher, executionId, `Execution timed out after ${this.timeoutMs()}ms`);
+        await this.failExecution(
+          publisher,
+          executionId,
+          `Execution timed out after ${this.timeoutMs()}ms`,
+        );
         return;
       }
 
-      const finalStatus = outcome.exitCode === 0 ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED;
+      const finalStatus =
+        outcome.exitCode === 0 ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED;
       await this.transition(publisher, executionId, finalStatus);
     } catch (err) {
       this.logger.error(`Execution ${executionId} failed: ${String(err)}`);
@@ -154,7 +159,10 @@ export class ExecutionProcessor extends WorkerHost {
    *  - cancelación del usuario (poll del status en BD cada 3s)
    *  - timeout máximo de ejecución
    */
-  private async waitForContainerOrAbort(containerId: string, executionId: string): Promise<WaitOutcome> {
+  private async waitForContainerOrAbort(
+    containerId: string,
+    executionId: string,
+  ): Promise<WaitOutcome> {
     const timers: NodeJS.Timeout[] = [];
     let active = true;
 
@@ -163,7 +171,9 @@ export class ExecutionProcessor extends WorkerHost {
       .then((r) => ({ exitCode: r.exitCode, aborted: null }));
 
     const timeoutP = new Promise<WaitOutcome>((resolve) => {
-      timers.push(setTimeout(() => resolve({ exitCode: null, aborted: 'timeout' }), this.timeoutMs()));
+      timers.push(
+        setTimeout(() => resolve({ exitCode: null, aborted: 'timeout' }), this.timeoutMs()),
+      );
     });
 
     const cancelP = new Promise<WaitOutcome>((resolve) => {
@@ -197,9 +207,13 @@ export class ExecutionProcessor extends WorkerHost {
   ): Promise<void> {
     const data: Record<string, unknown> = { status };
     if (
-      ([ExecutionStatus.COMPLETED, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED] as ExecutionStatus[]).includes(
-        status,
-      )
+      (
+        [
+          ExecutionStatus.COMPLETED,
+          ExecutionStatus.FAILED,
+          ExecutionStatus.CANCELLED,
+        ] as ExecutionStatus[]
+      ).includes(status)
     ) {
       data['completedAt'] = new Date();
     }
@@ -220,7 +234,11 @@ export class ExecutionProcessor extends WorkerHost {
     this.logger.log(`Execution ${executionId} → ${status}`);
   }
 
-  private async failExecution(publisher: RedisClient, executionId: string, message: string): Promise<void> {
+  private async failExecution(
+    publisher: RedisClient,
+    executionId: string,
+    message: string,
+  ): Promise<void> {
     // Condicional atómico: no pisa una cancelación ni falla una ejecución borrada.
     const { count } = await this.prisma.execution.updateMany({
       where: { id: executionId, status: { not: ExecutionStatus.CANCELLED } },

@@ -44,7 +44,14 @@ export function AppRouter() {
               <Route path="/tests/:testId" element={<TestDetailPage />} />
               <Route path="/tests/:testId/editor" element={<FlowEditorPage />} />
               <Route path={ROUTES.RECORDER} element={<RecorderPage />} />
-              <Route path={ROUTES.RECORDINGS} element={<div className="p-6 max-w-4xl mx-auto"><RecordingsPage /></div>} />
+              <Route
+                path={ROUTES.RECORDINGS}
+                element={
+                  <div className="p-6 max-w-4xl mx-auto">
+                    <RecordingsPage />
+                  </div>
+                }
+              />
               <Route path={ROUTES.EXECUTIONS} element={<ExecutionsListPage />} />
               <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
               <Route path="/reports/:executionId" element={<ReportViewerPage />} />

@@ -47,14 +47,22 @@ describe('RecorderService.getRecording', () => {
   it('devuelve la grabación de la org correcta', async () => {
     const { prisma, service } = build();
     prisma.recording.findUnique.mockResolvedValue({ id: 'r1', orgId: 'org-1' });
-    await expect(service.getRecording('r1', 'org-1')).resolves.toEqual({ id: 'r1', orgId: 'org-1' });
+    await expect(service.getRecording('r1', 'org-1')).resolves.toEqual({
+      id: 'r1',
+      orgId: 'org-1',
+    });
   });
 });
 
 describe('RecorderService.convertToTest', () => {
   it('lanza si la suite no pertenece a la org', async () => {
     const { prisma, service } = build();
-    prisma.recording.findUnique.mockResolvedValue({ id: 'r1', orgId: 'org-1', targetUrl: 'http://x', steps: [] });
+    prisma.recording.findUnique.mockResolvedValue({
+      id: 'r1',
+      orgId: 'org-1',
+      targetUrl: 'http://x',
+      steps: [],
+    });
     prisma.testSuite.findFirst.mockResolvedValue(null);
     await expect(service.convertToTest('r1', 'suite-1', 'My Test', 'org-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -91,7 +99,12 @@ describe('RecorderService.convertToTest', () => {
 
     const created = prisma.testStep.create.mock.calls.map((c) => c[0].data);
     expect(created[0]).toMatchObject({ order: 0, action: 'navigate', value: 'http://x' });
-    expect(created[1]).toMatchObject({ order: 1, action: 'click', selector: '[data-testid="login"]', selectorType: 'testId' });
+    expect(created[1]).toMatchObject({
+      order: 1,
+      action: 'click',
+      selector: '[data-testid="login"]',
+      selectorType: 'testId',
+    });
     expect(created[2]).toMatchObject({ order: 2, action: 'fill', value: 'hello' });
   });
 });

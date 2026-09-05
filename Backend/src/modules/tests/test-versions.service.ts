@@ -28,7 +28,7 @@ export class TestVersionsService {
       include: { steps: { orderBy: { order: 'asc' } } },
     });
 
-    const nextVersion = await db.testVersion.count({ where: { testId } }) + 1;
+    const nextVersion = (await db.testVersion.count({ where: { testId } })) + 1;
 
     await db.testVersion.create({
       data: {
@@ -59,7 +59,11 @@ export class TestVersionsService {
     });
   }
 
-  async findOne(testId: string, versionNumber: number, user: JwtPayload): Promise<TestVersionResponseDto> {
+  async findOne(
+    testId: string,
+    versionNumber: number,
+    user: JwtPayload,
+  ): Promise<TestVersionResponseDto> {
     await this.assertTestOwnership(testId, user.orgId);
     const version = await this.prisma.testVersion.findUnique({
       where: { testId_versionNumber: { testId, versionNumber } },

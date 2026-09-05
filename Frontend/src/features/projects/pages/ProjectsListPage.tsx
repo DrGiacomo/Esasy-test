@@ -28,12 +28,12 @@ export default function ProjectsListPage() {
       </div>
 
       {loading && (
-        <div className="flex justify-center py-12"><LoadingSpinner /></div>
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
       )}
 
-      {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
-      )}
+      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
 
       {!loading && !error && projects.length === 0 && (
         <EmptyState
@@ -51,7 +51,9 @@ export default function ProjectsListPage() {
 
       {!loading && projects.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => <ProjectCard key={p.id} project={p} onArchive={(id) => void handleArchive(id)} />)}
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} onArchive={(id) => void handleArchive(id)} />
+          ))}
         </div>
       )}
 

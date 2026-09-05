@@ -15,7 +15,12 @@ export class NlToFlowService {
     private readonly audit: AiAuditService,
   ) {}
 
-  async convert(prompt: string, projectId: string, userId: string, orgId: string): Promise<unknown> {
+  async convert(
+    prompt: string,
+    projectId: string,
+    userId: string,
+    orgId: string,
+  ): Promise<unknown> {
     const project = await this.prisma.project.findFirst({
       where: { id: projectId, organizationId: orgId },
     });
@@ -25,9 +30,16 @@ export class NlToFlowService {
     let result;
     try {
       result = await this.ai.complete(messages, undefined, { json: true });
-      await this.audit.log(userId, AiOperationType.NL_TO_FLOW, `NL: "${prompt.substring(0, 80)}"`, result);
+      await this.audit.log(
+        userId,
+        AiOperationType.NL_TO_FLOW,
+        `NL: "${prompt.substring(0, 80)}"`,
+        result,
+      );
     } catch (err) {
-      await this.audit.log(userId, AiOperationType.NL_TO_FLOW, `NL: "${prompt.substring(0, 80)}"`, { error: String(err) });
+      await this.audit.log(userId, AiOperationType.NL_TO_FLOW, `NL: "${prompt.substring(0, 80)}"`, {
+        error: String(err),
+      });
       throw err;
     }
 

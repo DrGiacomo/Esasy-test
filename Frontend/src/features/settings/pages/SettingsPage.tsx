@@ -8,7 +8,7 @@ import { useUiMode } from '@/hooks/useUiMode';
 // 'Git' solo aparece en modo complejo: sincronizar con un repositorio es exactamente
 // lo que el §2.1 llama «no exponer» al perfil que no programa.
 const TABS = ['Vista', 'Miembros', 'Secretos', 'Git'] as const;
-type Tab = typeof TABS[number];
+type Tab = (typeof TABS)[number];
 
 export default function SettingsPage() {
   const { sencillo } = useUiMode();

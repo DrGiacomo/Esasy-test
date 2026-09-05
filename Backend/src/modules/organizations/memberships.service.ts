@@ -34,11 +34,7 @@ export class MembershipsService {
     }));
   }
 
-  async invite(
-    orgId: string,
-    dto: InviteMemberDto,
-    user: JwtPayload,
-  ): Promise<MemberResponseDto> {
+  async invite(orgId: string, dto: InviteMemberDto, user: JwtPayload): Promise<MemberResponseDto> {
     this.assertSameOrg(orgId, user.orgId);
 
     const target = await this.prisma.user.findUnique({
@@ -77,7 +73,7 @@ export class MembershipsService {
 
     // Protección: no degradar al último ADMIN
     if (membership.role === MemberRole.ADMIN && dto.role !== MemberRole.ADMIN) {
-      await this.assertNotLastAdmin(orgId, targetUserId);
+      await this.assertNotLastAdmin(orgId);
     }
 
     const updated = await this.prisma.membership.update({
@@ -111,7 +107,7 @@ export class MembershipsService {
     const membership = await this.findMembershipOrThrow(targetUserId, orgId);
 
     if (membership.role === MemberRole.ADMIN) {
-      await this.assertNotLastAdmin(orgId, targetUserId);
+      await this.assertNotLastAdmin(orgId);
     }
 
     await this.prisma.membership.delete({
@@ -127,14 +123,20 @@ export class MembershipsService {
     return membership;
   }
 
-  private async assertNotLastAdmin(orgId: string, userId: string): Promise<void> {
+  /**
+   * Falla si la organización se quedaría sin ningún ADMIN.
+   *
+   * No recibe a quién se está quitando, y es correcto: solo hay que impedir la operación
+   * cuando queda un único ADMIN — sea quien sea el afectado. El parámetro `userId` estaba
+   * y no se usaba, que es peor que no tenerlo: hacía pensar que la comprobación era
+   * relativa a esa persona.
+   */
+  private async assertNotLastAdmin(orgId: string): Promise<void> {
     const adminCount = await this.prisma.membership.count({
       where: { organizationId: orgId, role: MemberRole.ADMIN },
     });
     if (adminCount <= 1) {
-      throw new BadRequestException(
-        'Cannot remove or demote the last ADMIN of an organization',
-      );
+      throw new BadRequestException('Cannot remove or demote the last ADMIN of an organization');
     }
   }
 

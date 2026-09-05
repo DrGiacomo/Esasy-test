@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (build + test)
+    name: Backend (lint + build + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,6 +33,13 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      # El lint va antes de compilar: es el paso más rápido y el que más veces falla.
+      # Sin --fix a propósito — en CI, un lint que arregla y luego aprueba es un gate
+      # que se abre solo. Estuvo fuera del pipeline desde junio por 450 errores de
+      # CRLF/prettier; se cerraron el 2026-09-04 junto con la causa (.gitattributes).
+      - name: Lint
+        run: npm run lint:ci
+
       - name: Build
         run: npm run build
 
@@ -40,7 +47,7 @@ jobs:
         run: npm test
 
   frontend:
-    name: Frontend (build + test)
+    name: Frontend (lint + build + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,6 +63,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint:ci
 
       - name: Build (typecheck + bundle)
         run: npm run build

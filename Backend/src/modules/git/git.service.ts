@@ -38,7 +38,7 @@ export class GitService {
     const integrations = await this.prisma.gitIntegration.findMany({
       where: { organizationId: user.orgId },
     });
-    return integrations.map(this.toResponse);
+    return integrations.map((i) => this.toResponse(i));
   }
 
   async remove(id: string, user: JwtPayload): Promise<void> {
@@ -79,7 +79,9 @@ export class GitService {
       data: { lastSyncedAt: new Date() },
     });
 
-    this.logger.log(`Synced test ${testId} → ${integration.provider} ${integration.repoUrl}:${filePath}`);
+    this.logger.log(
+      `Synced test ${testId} → ${integration.provider} ${integration.repoUrl}:${filePath}`,
+    );
     return { message: result.commitUrl ? `Synced: ${result.commitUrl}` : `Synced ${filePath}` };
   }
 
@@ -101,9 +103,15 @@ export class GitService {
   }
 
   private toResponse(g: {
-    id: string; organizationId: string; provider: import('@prisma/client').GitProvider;
-    repoUrl: string; defaultBranch: string; syncPath: string;
-    isActive: boolean; lastSyncedAt: Date | null; createdAt: Date;
+    id: string;
+    organizationId: string;
+    provider: import('@prisma/client').GitProvider;
+    repoUrl: string;
+    defaultBranch: string;
+    syncPath: string;
+    isActive: boolean;
+    lastSyncedAt: Date | null;
+    createdAt: Date;
   }): GitIntegrationResponseDto {
     return {
       id: g.id,

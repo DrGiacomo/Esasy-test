@@ -7,15 +7,29 @@ export function useProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProjects = useCallback(() => {
-    setLoading(true);
-    projectsApi.getAll()
+  /**
+   * Pide los proyectos. NO toca `loading` al empezar a proposito: en el montaje ya
+   * vale `true`, asi que ponerlo otra vez solo provoca un render de mas — y hacerlo
+   * de forma sincrona dentro de un efecto es justo lo que React desaconseja.
+   */
+  const cargar = useCallback(() => {
+    projectsApi
+      .getAll()
       .then(setProjects)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
 
-  return { projects, loading, error, refetch: fetchProjects };
+  /** Recargar a mano si vuelve a hacer falta el indicador de carga. */
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    cargar();
+  }, [cargar]);
+
+  return { projects, loading, error, refetch };
 }

@@ -15,10 +15,15 @@ export function GitIntegrationPanel() {
   const [creating, setCreating] = useState(false);
 
   function fetchIntegrations() {
-    api.get<GitIntegration[]>('/git/integrations').then((r) => setIntegrations(r.data)).finally(() => setLoading(false));
+    api
+      .get<GitIntegration[]>('/git/integrations')
+      .then((r) => setIntegrations(r.data))
+      .finally(() => setLoading(false));
   }
 
-  useEffect(() => { fetchIntegrations(); }, []);
+  useEffect(() => {
+    fetchIntegrations();
+  }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +32,9 @@ export function GitIntegrationPanel() {
       await api.post('/git/integrations', form);
       setShowCreate(false);
       fetchIntegrations();
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   }
 
   async function remove(id: string) {
@@ -35,12 +42,20 @@ export function GitIntegrationPanel() {
     setIntegrations((p) => p.filter((i) => i.id !== id));
   }
 
-  if (loading) return <div className="flex justify-center py-8"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-8">
+        <LoadingSpinner />
+      </div>
+    );
 
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <Button size="sm" onClick={() => setShowCreate(true)}><Plus size={14} />Conectar repositorio</Button>
+        <Button size="sm" onClick={() => setShowCreate(true)}>
+          <Plus size={14} />
+          Conectar repositorio
+        </Button>
       </div>
 
       {integrations.length === 0 ? (
@@ -50,14 +65,20 @@ export function GitIntegrationPanel() {
       ) : (
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           {integrations.map((g, i) => (
-            <div key={g.id} className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}>
+            <div
+              key={g.id}
+              className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+            >
               <GitBranch size={16} className="text-gray-400" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-800">{g.repoUrl}</p>
                 <p className="text-xs text-gray-500">branch: {g.branch}</p>
               </div>
               <Badge label={g.provider} color="indigo" />
-              <button onClick={() => void remove(g.id)} className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-red-50">
+              <button
+                onClick={() => void remove(g.id)}
+                className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-red-50"
+              >
                 <Trash2 size={14} />
               </button>
             </div>
@@ -68,21 +89,38 @@ export function GitIntegrationPanel() {
       <Modal open={showCreate} title="Conectar repositorio" onClose={() => setShowCreate(false)}>
         <form onSubmit={(e) => void create(e)} className="space-y-4">
           {[
-            { key: 'repoUrl', label: 'URL del repositorio', placeholder: 'https://github.com/org/repo' },
+            {
+              key: 'repoUrl',
+              label: 'URL del repositorio',
+              placeholder: 'https://github.com/org/repo',
+            },
             { key: 'branch', label: 'Branch', placeholder: 'main' },
-            { key: 'token', label: 'Token de acceso', placeholder: 'ghp_xxxxxxxxxx', type: 'password' },
+            {
+              key: 'token',
+              label: 'Token de acceso',
+              placeholder: 'ghp_xxxxxxxxxx',
+              type: 'password',
+            },
           ].map(({ key, label, placeholder, type }) => (
             <div key={key}>
               <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-              <input required type={type ?? 'text'} value={form[key as keyof typeof form]}
+              <input
+                required
+                type={type ?? 'text'}
+                value={form[key as keyof typeof form]}
                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-                placeholder={placeholder} />
+                placeholder={placeholder}
+              />
             </div>
           ))}
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" type="button" onClick={() => setShowCreate(false)}>Cancelar</Button>
-            <Button type="submit" loading={creating}>Conectar</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowCreate(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={creating}>
+              Conectar
+            </Button>
           </div>
         </form>
       </Modal>

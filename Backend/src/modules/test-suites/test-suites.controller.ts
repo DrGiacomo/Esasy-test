@@ -1,6 +1,14 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, Patch, Post, UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -36,10 +44,7 @@ export class TestSuitesController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<TestSuiteResponseDto> {
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<TestSuiteResponseDto> {
     return this.testSuitesService.findById(id, user);
   }
 
@@ -56,10 +61,7 @@ export class TestSuitesController {
   @Delete(':id')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  archive(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<void> {
+  archive(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<void> {
     return this.testSuitesService.archive(id, user);
   }
 }

@@ -37,7 +37,7 @@ export class SecretsService {
       where: { organizationId: user.orgId },
       orderBy: { name: 'asc' },
     });
-    return secrets.map(this.toResponse);
+    return secrets.map((s) => this.toResponse(s));
   }
 
   async remove(id: string, user: JwtPayload): Promise<void> {
@@ -49,9 +49,13 @@ export class SecretsService {
   }
 
   private toResponse(s: {
-    id: string; organizationId: string; name: string;
-    type: import('@prisma/client').SecretType; description: string | null;
-    createdAt: Date; updatedAt: Date;
+    id: string;
+    organizationId: string;
+    name: string;
+    type: import('@prisma/client').SecretType;
+    description: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }): SecretResponseDto {
     return {
       id: s.id,

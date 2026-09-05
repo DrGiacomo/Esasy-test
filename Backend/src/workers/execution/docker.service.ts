@@ -40,8 +40,11 @@ export class DockerService {
 
   async waitForContainer(containerId: string): Promise<{ exitCode: number }> {
     const container = this.docker.getContainer(containerId);
-    const result = await container.wait();
-    return { exitCode: result.StatusCode };
+    // `container.wait()` de dockerode devuelve `any`. Se declara la forma para que
+    // `StatusCode` este comprobado: es el codigo de salida del que depende si la
+    // ejecucion se marca COMPLETED o FAILED.
+    const result = (await container.wait()) as { StatusCode?: number };
+    return { exitCode: result.StatusCode ?? -1 };
   }
 
   async stopAndRemove(containerId: string): Promise<void> {

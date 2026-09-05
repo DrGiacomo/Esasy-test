@@ -7,7 +7,12 @@ import { useState } from 'react';
 
 export default function RegisterPage() {
   const { register, loading, error } = useAuth();
-  const [form, setForm] = useState({ email: '', password: '', displayName: '', organizationName: '' });
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    displayName: '',
+    organizationName: '',
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,14 +38,25 @@ export default function RegisterPage() {
               { key: 'displayName', label: 'Nombre', type: 'text', placeholder: 'Tu nombre' },
               { key: 'email', label: 'Email', type: 'email', placeholder: 'tu@email.com' },
               { key: 'password', label: 'Contraseña', type: 'password', placeholder: '••••••••' },
-              { key: 'organizationName', label: 'Nombre de la organización', type: 'text', placeholder: 'Mi empresa' },
+              {
+                key: 'organizationName',
+                label: 'Nombre de la organización',
+                type: 'text',
+                placeholder: 'Mi empresa',
+              },
             ].map(({ key, label, type, placeholder }) => (
               <div key={key}>
                 <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
                 <input
                   type={type}
                   required
-                  minLength={key === 'password' ? 8 : key === 'displayName' || key === 'organizationName' ? 2 : undefined}
+                  minLength={
+                    key === 'password'
+                      ? 8
+                      : key === 'displayName' || key === 'organizationName'
+                        ? 2
+                        : undefined
+                  }
                   maxLength={key === 'password' ? 64 : 80}
                   value={form[key as keyof typeof form]}
                   onChange={field(key as keyof typeof form)}

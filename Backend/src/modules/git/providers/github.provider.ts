@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import { GitProviderClient, GitPushOptions, GitPushResult } from './git-provider.interface';
@@ -8,6 +13,12 @@ import { GitProviderClient, GitPushOptions, GitPushResult } from './git-provider
  * Crea el archivo o lo actualiza (resolviendo el sha previo). Soporta GitHub Enterprise
  * mediante GITHUB_API_URL.
  */
+/** Lo que devuelve la API de Contents de GitHub. Ver el porque en `deepseek.provider.ts`. */
+interface RespuestaContents {
+  sha?: string;
+  commit?: { html_url?: string };
+}
+
 @Injectable()
 export class GithubProvider implements GitProviderClient {
   private readonly logger = new Logger(GithubProvider.name);
@@ -29,7 +40,7 @@ export class GithubProvider implements GitProviderClient {
     const sha = await this.getExistingSha(url, opts.branch, headers);
 
     try {
-      const res = await axios.put(
+      const res = await axios.put<RespuestaContents>(
         url,
         {
           message: opts.commitMessage,
@@ -51,7 +62,11 @@ export class GithubProvider implements GitProviderClient {
     headers: Record<string, string>,
   ): Promise<string | undefined> {
     try {
-      const res = await axios.get(url, { headers, params: { ref: branch }, timeout: 20000 });
+      const res = await axios.get<RespuestaContents>(url, {
+        headers,
+        params: { ref: branch },
+        timeout: 20000,
+      });
       return res.data?.sha;
     } catch (err) {
       if (err instanceof AxiosError && err.response?.status === 404) return undefined;

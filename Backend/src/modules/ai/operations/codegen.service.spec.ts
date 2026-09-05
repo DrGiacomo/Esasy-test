@@ -5,7 +5,7 @@ function buildMocks() {
   const ai = { complete: jest.fn() };
   const prisma = { test: { findFirst: jest.fn(), update: jest.fn() } };
   const audit = { log: jest.fn().mockResolvedValue(undefined) };
-  const service = new CodegenService(ai as never, prisma as never, audit as never);
+  const service = new CodegenService(ai, prisma as never, audit as never);
   return { ai, prisma, audit, service };
 }
 
@@ -14,7 +14,9 @@ describe('CodegenService — multi-tenant', () => {
     const { ai, prisma, service } = buildMocks();
     prisma.test.findFirst.mockResolvedValue(null);
 
-    await expect(service.generate('test-1', 'user-1', 'org-2')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.generate('test-1', 'user-1', 'org-2')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(prisma.test.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'test-1', suite: { project: { organizationId: 'org-2' } } },
@@ -25,7 +27,12 @@ describe('CodegenService — multi-tenant', () => {
 
   it('generates and persists code for an owned test', async () => {
     const { ai, prisma, service } = buildMocks();
-    prisma.test.findFirst.mockResolvedValue({ id: 'test-1', name: 'Login', flowModel: {}, steps: [] });
+    prisma.test.findFirst.mockResolvedValue({
+      id: 'test-1',
+      name: 'Login',
+      flowModel: {},
+      steps: [],
+    });
     ai.complete.mockResolvedValue({ content: 'await page.goto("/")' });
 
     const code = await service.generate('test-1', 'user-1', 'org-1');

@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -46,11 +42,7 @@ export class ProjectsService {
     return project;
   }
 
-  async update(
-    id: string,
-    dto: UpdateProjectDto,
-    user: JwtPayload,
-  ): Promise<ProjectResponseDto> {
+  async update(id: string, dto: UpdateProjectDto, user: JwtPayload): Promise<ProjectResponseDto> {
     await this.findById(id, user);
 
     return this.prisma.project.update({

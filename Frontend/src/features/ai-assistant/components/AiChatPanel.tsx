@@ -28,7 +28,9 @@ export function AiChatPanel() {
             Pregúntame sobre Playwright, E2E testing o cómo usar esta plataforma.
           </p>
         )}
-        {messages.map((m, i) => <AiChatMessage key={i} message={m} />)}
+        {messages.map((m, i) => (
+          <AiChatMessage key={i} message={m} />
+        ))}
         {loading && (
           <div className="flex gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100">

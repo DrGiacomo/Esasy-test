@@ -2,7 +2,8 @@
 
 export type MemberRole = 'ADMIN' | 'EDITOR' | 'VIEWER';
 export type TestStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-export type ExecutionStatus = 'QUEUED' | 'PROVISIONING' | 'RUNNING' | 'COLLECTING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export type ExecutionStatus =
+  'QUEUED' | 'PROVISIONING' | 'RUNNING' | 'COLLECTING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export type StepResultStatus = 'PASSED' | 'FAILED' | 'SKIPPED';
 export type HealingStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED';
 export type AiOperationType = 'CODEGEN' | 'SELF_HEALING' | 'NL_TO_FLOW' | 'DOCUMENTATION' | 'CHAT';

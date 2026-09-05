@@ -23,7 +23,10 @@ export function buildDocumentationPrompt(
   steps: DocumentableStep[],
 ): AiMessage[] {
   const pasos = steps
-    .map((s) => `${s.order + 1}. [${s.action}] ${s.description ?? '(sin descripción)'}${s.value ? ` — valor: "${s.value}"` : ''}`)
+    .map(
+      (s) =>
+        `${s.order + 1}. [${s.action}] ${s.description ?? '(sin descripción)'}${s.value ? ` — valor: "${s.value}"` : ''}`,
+    )
     .join('\n');
 
   return [

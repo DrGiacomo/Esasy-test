@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { MemberRole } from '@prisma/client';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import type { RequestConUsuario } from '../types/request-con-usuario';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -15,7 +16,7 @@ export class RoleGuard implements CanActivate {
     ]);
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
-    const user = context.switchToHttp().getRequest().user as JwtPayload;
+    const user = context.switchToHttp().getRequest<RequestConUsuario>().user as JwtPayload;
     if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException('Insufficient permissions');
     }

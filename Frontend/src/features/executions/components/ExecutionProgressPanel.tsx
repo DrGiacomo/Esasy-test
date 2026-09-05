@@ -1,4 +1,9 @@
-interface Event { event: string; testId?: string; status?: string; timestamp: number }
+interface Event {
+  event: string;
+  testId?: string;
+  status?: string;
+  timestamp: number;
+}
 
 export function ExecutionProgressPanel({ events }: { events: Event[] }) {
   return (

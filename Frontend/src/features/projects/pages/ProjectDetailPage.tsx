@@ -24,7 +24,10 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (!projectId) return;
     Promise.all([projectsApi.getOne(projectId), projectsApi.getSuites(projectId)])
-      .then(([p, s]) => { setProject(p); setSuites(s); })
+      .then(([p, s]) => {
+        setProject(p);
+        setSuites(s);
+      })
       .finally(() => setLoading(false));
   }, [projectId]);
 
@@ -37,10 +40,17 @@ export default function ProjectDetailPage() {
       setSuites((p) => [...p, suite]);
       setShowModal(false);
       setSuiteName('');
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner />
+      </div>
+    );
   if (!project) return <p className="text-gray-500">Proyecto no encontrado</p>;
 
   return (
@@ -114,8 +124,12 @@ export default function ProjectDetailPage() {
                 placeholder="Nombre de la suite"
               />
               <div className="flex justify-end gap-3">
-                <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Cancelar</Button>
-                <Button type="submit" loading={creating}>Crear</Button>
+                <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" loading={creating}>
+                  Crear
+                </Button>
               </div>
             </form>
           </Modal>
@@ -123,9 +137,7 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Grabaciones tab */}
-      {tab === 'recordings' && projectId && (
-        <RecordingsPage projectId={projectId} />
-      )}
+      {tab === 'recordings' && projectId && <RecordingsPage projectId={projectId} />}
     </div>
   );
 }

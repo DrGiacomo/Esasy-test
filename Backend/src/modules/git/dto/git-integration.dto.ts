@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUrl, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUrl } from 'class-validator';
 import { GitProvider } from '@prisma/client';
 
 export class CreateGitIntegrationDto {

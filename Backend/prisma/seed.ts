@@ -23,7 +23,15 @@
  *   npm run db:seed -- --forzar  siembra aunque haya datos reales
  */
 
-import { PrismaClient, MemberRole, TestStatus, ExecutionStatus, StepResultStatus, HealingStatus, UiMode } from '@prisma/client';
+import {
+  PrismaClient,
+  MemberRole,
+  TestStatus,
+  ExecutionStatus,
+  StepResultStatus,
+  HealingStatus,
+  UiMode,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -153,11 +161,43 @@ async function sembrar(forzar: boolean): Promise<void> {
       flowModel: [],
       steps: {
         create: [
-          { order: 0, action: 'navigate', value: 'https://example.com/entrar', description: 'Ir a la página de acceso' },
-          { order: 1, action: 'fill', selector: '[name="email"]', selectorType: 'css', value: 'ana@demo.local', description: 'Escribir "ana@demo.local" en «Correo electrónico»' },
-          { order: 2, action: 'fill', selector: '[name="password"]', selectorType: 'css', value: 'demo1234', description: 'Escribir la contraseña en «Contraseña»' },
-          { order: 3, action: 'click', selector: 'text="Entrar"', selectorType: 'text', description: 'Pulsar «Entrar»' },
-          { order: 4, action: 'assert_text', selector: '[data-testid="saludo"]', selectorType: 'testId', value: 'Hola, Ana', description: 'Comprobar que aparece el saludo «Hola, Ana»' },
+          {
+            order: 0,
+            action: 'navigate',
+            value: 'https://example.com/entrar',
+            description: 'Ir a la página de acceso',
+          },
+          {
+            order: 1,
+            action: 'fill',
+            selector: '[name="email"]',
+            selectorType: 'css',
+            value: 'ana@demo.local',
+            description: 'Escribir "ana@demo.local" en «Correo electrónico»',
+          },
+          {
+            order: 2,
+            action: 'fill',
+            selector: '[name="password"]',
+            selectorType: 'css',
+            value: 'demo1234',
+            description: 'Escribir la contraseña en «Contraseña»',
+          },
+          {
+            order: 3,
+            action: 'click',
+            selector: 'text="Entrar"',
+            selectorType: 'text',
+            description: 'Pulsar «Entrar»',
+          },
+          {
+            order: 4,
+            action: 'assert_text',
+            selector: '[data-testid="saludo"]',
+            selectorType: 'testId',
+            value: 'Hola, Ana',
+            description: 'Comprobar que aparece el saludo «Hola, Ana»',
+          },
         ],
       },
     },
@@ -174,12 +214,44 @@ async function sembrar(forzar: boolean): Promise<void> {
       flowModel: [],
       steps: {
         create: [
-          { order: 0, action: 'navigate', value: 'https://example.com/entrar', description: 'Ir a la página de acceso' },
-          { order: 1, action: 'fill', selector: '[name="email"]', selectorType: 'css', value: 'ana@demo.local', description: 'Escribir "ana@demo.local" en «Correo electrónico»' },
-          { order: 2, action: 'fill', selector: '[name="password"]', selectorType: 'css', value: 'clave-mala', description: 'Escribir una contraseña equivocada' },
-          { order: 3, action: 'click', selector: 'text="Entrar"', selectorType: 'text', description: 'Pulsar «Entrar»' },
+          {
+            order: 0,
+            action: 'navigate',
+            value: 'https://example.com/entrar',
+            description: 'Ir a la página de acceso',
+          },
+          {
+            order: 1,
+            action: 'fill',
+            selector: '[name="email"]',
+            selectorType: 'css',
+            value: 'ana@demo.local',
+            description: 'Escribir "ana@demo.local" en «Correo electrónico»',
+          },
+          {
+            order: 2,
+            action: 'fill',
+            selector: '[name="password"]',
+            selectorType: 'css',
+            value: 'clave-mala',
+            description: 'Escribir una contraseña equivocada',
+          },
+          {
+            order: 3,
+            action: 'click',
+            selector: 'text="Entrar"',
+            selectorType: 'text',
+            description: 'Pulsar «Entrar»',
+          },
           // Este es el que se rompe: la página cambió y la clase ya no existe.
-          { order: 4, action: 'assert_visible', selector: '.alert-danger-v1', selectorType: 'css', confidenceScore: 0.21, description: 'Comprobar que aparece el aviso de error' },
+          {
+            order: 4,
+            action: 'assert_visible',
+            selector: '.alert-danger-v1',
+            selectorType: 'css',
+            confidenceScore: 0.21,
+            description: 'Comprobar que aparece el aviso de error',
+          },
         ],
       },
     },
@@ -246,7 +318,7 @@ async function sembrar(forzar: boolean): Promise<void> {
         executionResultId: resultMal.id,
         stepId: s.id,
         status: roto ? StepResultStatus.FAILED : StepResultStatus.PASSED,
-        durationMs: roto ? 15_040 : [1100, 2900, 2700, 4200][i] ?? 1000,
+        durationMs: roto ? 15_040 : ([1100, 2900, 2700, 4200][i] ?? 1000),
         errorDetails: roto ? 'No se encontró el elemento tras esperar 15 s.' : null,
       };
     }),

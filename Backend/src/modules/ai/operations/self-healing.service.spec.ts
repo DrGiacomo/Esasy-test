@@ -17,10 +17,10 @@ function buildMocks() {
   const audit = { log: jest.fn().mockResolvedValue(undefined) };
   const config = { get: jest.fn((_key: string, def?: unknown) => def) };
   const service = new SelfHealingService(
-    ai as never,
+    ai,
     prisma as never,
     audit as never,
-    vision as never,
+    vision,
     config as never,
   );
   return { ai, vision, prisma, audit, config, service };
@@ -80,7 +80,13 @@ describe('SelfHealingService.propose — multi-tenant', () => {
 
   it('rejects an invalid AI proposal (missing selector / confidence)', async () => {
     const { ai, prisma, service } = buildMocks();
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 'test-1', test: {} });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: '#old',
+      testId: 'test-1',
+      test: {},
+    });
     ai.complete.mockResolvedValue({ content: '{"reasoning":"no selector here"}' });
 
     await expect(service.propose('step-1', '<html/>', 'user-1', 'org-1')).rejects.toBeInstanceOf(
@@ -104,14 +110,24 @@ describe('SelfHealingService.proposeAutomatic', () => {
     prisma.testStep.findFirst.mockResolvedValue(null);
     expect(await service.proposeAutomatic(params())).toBeNull();
 
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: null, testId: 't1' });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: null,
+      testId: 't1',
+    });
     expect(await service.proposeAutomatic(params())).toBeNull();
     expect(ai.complete).not.toHaveBeenCalled();
   });
 
   it('deduplica: si ya hay una propuesta PENDING no llama a la IA', async () => {
     const { ai, prisma, service } = buildMocks();
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: '#old',
+      testId: 't1',
+    });
     prisma.selectorHealingLog.findFirst.mockResolvedValue({ id: 'log-existing' });
 
     const res = await service.proposeAutomatic(params());
@@ -122,9 +138,16 @@ describe('SelfHealingService.proposeAutomatic', () => {
 
   it('descarta propuestas por debajo del umbral de confianza', async () => {
     const { ai, prisma, config, service } = buildMocks();
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: '#old',
+      testId: 't1',
+    });
     prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
-    config.get.mockImplementation((k: string, def?: unknown) => (k === 'SELF_HEALING_MIN_CONFIDENCE' ? 0.8 : def));
+    config.get.mockImplementation((k: string, def?: unknown) =>
+      k === 'SELF_HEALING_MIN_CONFIDENCE' ? 0.8 : def,
+    );
     ai.complete.mockResolvedValue({ content: JSON.stringify({ selector: '#x', confidence: 0.5 }) });
 
     const res = await service.proposeAutomatic(params());
@@ -135,11 +158,19 @@ describe('SelfHealingService.proposeAutomatic', () => {
 
   it('usa el proveedor de visión y adjunta el screenshot cuando hay imagen', async () => {
     const { vision, prisma, config, service } = buildMocks();
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1', confidenceScore: 0.3 });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: '#old',
+      testId: 't1',
+      confidenceScore: 0.3,
+    });
     prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
     prisma.selectorHealingLog.create.mockResolvedValue({ id: 'log-new' });
     config.get.mockImplementation((_k: string, def?: unknown) => def);
-    vision.complete.mockResolvedValue({ content: JSON.stringify({ selector: '#good', confidence: 0.9, reasoning: 'r' }) });
+    vision.complete.mockResolvedValue({
+      content: JSON.stringify({ selector: '#good', confidence: 0.9, reasoning: 'r' }),
+    });
 
     const res = await service.proposeAutomatic(params({ screenshot: 'data:image/png;base64,AAA' }));
 
@@ -151,7 +182,12 @@ describe('SelfHealingService.proposeAutomatic', () => {
 
   it('nunca lanza: si la IA falla devuelve null', async () => {
     const { ai, prisma, config, service } = buildMocks();
-    prisma.testStep.findFirst.mockResolvedValue({ id: 'step-1', action: 'click', selector: '#old', testId: 't1' });
+    prisma.testStep.findFirst.mockResolvedValue({
+      id: 'step-1',
+      action: 'click',
+      selector: '#old',
+      testId: 't1',
+    });
     prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
     config.get.mockImplementation((_k: string, def?: unknown) => def);
     ai.complete.mockRejectedValue(new Error('boom'));
@@ -165,7 +201,9 @@ describe('SelfHealingService.approve', () => {
     const { prisma, service } = buildMocks();
     prisma.selectorHealingLog.findFirst.mockResolvedValue(null);
 
-    await expect(service.approve('log-1', 'user-1', 'org-2')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.approve('log-1', 'user-1', 'org-2')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(prisma.selectorHealingLog.findFirst).toHaveBeenCalledWith({
       where: { id: 'log-1', test: { suite: { project: { organizationId: 'org-2' } } } },
     });
@@ -180,7 +218,9 @@ describe('SelfHealingService.approve', () => {
       status: HealingStatus.REJECTED,
     });
 
-    await expect(service.approve('log-1', 'user-1', 'org-1')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.approve('log-1', 'user-1', 'org-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
     expect(prisma.testStep.update).not.toHaveBeenCalled();
   });
 
@@ -201,7 +241,9 @@ describe('SelfHealingService.approve', () => {
       data: { selector: '#new', confidenceScore: 0.9 },
     });
     expect(prisma.selectorHealingLog.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: HealingStatus.APPROVED }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: HealingStatus.APPROVED }),
+      }),
     );
   });
 });
@@ -243,7 +285,9 @@ describe('SelfHealingService.reject', () => {
     await service.reject('log-1', 'user-1', 'org-1', 'nope');
 
     expect(prisma.selectorHealingLog.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: HealingStatus.REJECTED }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: HealingStatus.REJECTED }),
+      }),
     );
   });
 });

@@ -47,13 +47,17 @@ export class AutoHealingService {
     }
 
     const base = this.config.get<string>('ARTIFACTS_VOLUME_PATH', '/artifacts');
-    this.logger.log(`Auto-heal: ${failedSteps.length} step(s) fallido(s) en ejecución ${executionId}`);
+    this.logger.log(
+      `Auto-heal: ${failedSteps.length} step(s) fallido(s) en ejecución ${executionId}`,
+    );
 
     for (const { stepId } of failedSteps) {
       const pageHtml = this.readText(path.join(base, executionId, `${stepId}_failure.html`));
       if (!pageHtml) continue; // sin HTML no hay nada que analizar
 
-      const screenshot = this.readImageBase64(path.join(base, executionId, `${stepId}_failure.png`));
+      const screenshot = this.readImageBase64(
+        path.join(base, executionId, `${stepId}_failure.png`),
+      );
       await this.selfHealing.proposeAutomatic({ stepId, pageHtml, screenshot, userId, orgId });
     }
   }

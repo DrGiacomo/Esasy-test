@@ -23,7 +23,9 @@ interface Props {
 
 export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
   const { sencillo } = useUiMode();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: step.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -39,14 +41,22 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
       style={style}
       onClick={onSelect}
       className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
-        isSelected ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-gray-200 bg-white hover:border-gray-300'
+        isSelected
+          ? 'border-indigo-400 ring-2 ring-indigo-200'
+          : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
     >
-      <button {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600">
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-gray-400 hover:text-gray-600"
+      >
         <GripVertical size={16} />
       </button>
 
-      <span className={`rounded px-2 py-0.5 text-xs font-medium border ${colorCls}`}>{step.action}</span>
+      <span className={`rounded px-2 py-0.5 text-xs font-medium border ${colorCls}`}>
+        {step.action}
+      </span>
 
       {/* En SENCILLO, la frase; en COMPLEJO, el selector como siempre. */}
       {sencillo ? (
@@ -58,7 +68,10 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
       )}
 
       <button
-        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
         className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-400"
       >
         <Trash2 size={14} />

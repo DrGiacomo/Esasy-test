@@ -20,13 +20,13 @@ export class AiAuditService {
       data: {
         userId,
         operationType,
-        modelUsed: success ? (result as AiResponse).modelUsed : 'unknown',
+        modelUsed: success ? result.modelUsed : 'unknown',
         promptSummary,
-        inputTokens: success ? (result as AiResponse).inputTokens : null,
-        outputTokens: success ? (result as AiResponse).outputTokens : null,
-        latencyMs: success ? (result as AiResponse).latencyMs : null,
+        inputTokens: success ? result.inputTokens : null,
+        outputTokens: success ? result.outputTokens : null,
+        latencyMs: success ? result.latencyMs : null,
         success,
-        errorMessage: success ? null : (result as { error: string }).error,
+        errorMessage: success ? null : result.error,
         relatedTestId,
       },
     });

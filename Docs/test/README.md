@@ -2,6 +2,11 @@
 
 Carpeta donde se registra **qué se probó, cómo y qué resultó**. Un archivo por prueba.
 
+> **Esta carpeta es la tanda del `2026-06-27` y se conserva como registro histórico.**
+> La verificación vigente, con los resultados del `2026-09-04`, está en
+> [`../COMO-PROBAR.md`](../COMO-PROBAR.md) — nueve comprobaciones por HTTP más una ejecución
+> real de punta a punta, escritas como paso a paso con lo que debe y lo que no debe pasar.
+
 - **Fecha de la tanda:** 2026-06-27
 - **Rama git:** `feat/secrets-executor-and-ci` (local). Remoto: `origin` → `https://github.com/DrGiacomo/Esasy-test.git`. ⚠️ La rama **no está pusheada** todavía.
 - **Entorno:** Windows 11 · Node v24 · Docker Engine 29.5.3 (Docker Desktop) · Postgres 16 + Redis 7 (contenedores `e2e_postgres`/`e2e_redis`, healthy) · backend y worker corridos en local con `npm` contra la infra dockerizada.

@@ -30,56 +30,38 @@ export class AiController {
   ) {}
 
   @Post('chat')
-  chat(
-    @Body() dto: ChatRequestDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  chat(@Body() dto: ChatRequestDto, @CurrentUser() user: JwtPayload) {
     return this.chatService.chat(dto.messages, user.sub, user.orgId, dto.relatedTestId);
   }
 
   @Post('codegen')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  codegen(
-    @Body() dto: CodegenRequestDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  codegen(@Body() dto: CodegenRequestDto, @CurrentUser() user: JwtPayload) {
     return this.codegenService.generate(dto.testId, user.sub, user.orgId);
   }
 
   /** Documentación en lenguaje llano. Es lo que el modo SENCILLO enseña de un test. */
   @Post('documentation')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  documentation(
-    @Body() dto: DocumentationRequestDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  documentation(@Body() dto: DocumentationRequestDto, @CurrentUser() user: JwtPayload) {
     return this.documentationService.generate(dto.testId, user.sub, user.orgId);
   }
 
   @Post('nl-to-flow')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  nlToFlow(
-    @Body() dto: NlToFlowRequestDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  nlToFlow(@Body() dto: NlToFlowRequestDto, @CurrentUser() user: JwtPayload) {
     return this.nlToFlowService.convert(dto.prompt, dto.projectId, user.sub, user.orgId);
   }
 
   @Post('heal')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  proposeHeal(
-    @Body() dto: HealStepRequestDto,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  proposeHeal(@Body() dto: HealStepRequestDto, @CurrentUser() user: JwtPayload) {
     return this.selfHealingService.propose(dto.stepId, dto.pageHtml, user.sub, user.orgId);
   }
 
   @Post('heal/:healingLogId/approve')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
-  approveHeal(
-    @Param('healingLogId') healingLogId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  approveHeal(@Param('healingLogId') healingLogId: string, @CurrentUser() user: JwtPayload) {
     return this.selfHealingService.approve(healingLogId, user.sub, user.orgId);
   }
 

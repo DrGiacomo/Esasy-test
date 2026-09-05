@@ -30,10 +30,27 @@ interface ActionEvent {
   url?: string;
 }
 
+/**
+ * Lo que este gateway guarda en `client.data`.
+ *
+ * Sin esto, `client.data` es `any` y cada `client.data.identity` era un aviso de
+ * `no-unsafe-member-access` — cuatro en este archivo. Peor que el aviso: con `any`,
+ * escribir mal el nombre del campo compilaria igual.
+ */
+interface DatosSocket {
+  identity?: SocketIdentity;
+}
+
+/** El socket de este gateway, con su `data` tipado. */
+type SocketRecorder = Socket<
+  Record<string, never>,
+  Record<string, never>,
+  Record<string, never>,
+  DatosSocket
+>;
+
 /** Identidad del socket: o un usuario del frontend (JWT) o el contenedor recorder (token de sesión). */
-type SocketIdentity =
-  | { kind: 'user'; user: JwtPayload }
-  | { kind: 'recorder'; sessionId: string };
+type SocketIdentity = { kind: 'user'; user: JwtPayload } | { kind: 'recorder'; sessionId: string };
 
 interface RecorderTokenPayload {
   kind: 'recorder';
@@ -50,7 +67,7 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly jwt: JwtService,
   ) {}
 
-  handleConnection(client: Socket) {
+  handleConnection(client: SocketRecorder) {
     const identity = this.authenticate(client);
     if (!identity) {
       this.logger.debug(`Rejecting unauthenticated recorder client: ${client.id}`);
@@ -61,14 +78,14 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.logger.debug(`Recorder client connected: ${client.id} (${identity.kind})`);
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: SocketRecorder) {
     this.logger.debug(`Recorder client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('session:join')
   handleJoin(
     @MessageBody() data: { sessionId: string },
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: SocketRecorder,
   ) {
     if (!this.canAccessSession(client, data.sessionId)) {
       this.logger.warn(`Denied session:join to ${data?.sessionId} for client ${client.id}`);
@@ -78,9 +95,9 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   @SubscribeMessage('action:perform')
-  handleAction(@MessageBody() data: ActionEvent, @ConnectedSocket() client: Socket) {
+  handleAction(@MessageBody() data: ActionEvent, @ConnectedSocket() client: SocketRecorder) {
     // Solo un usuario del frontend dueño de la sesión puede dirigir acciones al contenedor.
-    const identity = client.data.identity as SocketIdentity | undefined;
+    const identity = client.data.identity;
     if (identity?.kind !== 'user' || !this.canAccessSession(client, data.sessionId)) {
       this.logger.warn(`Denied action:perform on ${data?.sessionId} for client ${client.id}`);
       return;
@@ -92,7 +109,7 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   @SubscribeMessage('frame')
   handleFrame(
     @MessageBody() data: { sessionId: string; timestamp: number; data: string },
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: SocketRecorder,
   ) {
     if (!this.isContainerOf(client, data.sessionId)) return;
     client.to(`session:${data.sessionId}`).emit('frame', data);
@@ -102,7 +119,7 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   @SubscribeMessage('action:captured')
   handleActionCaptured(
     @MessageBody() data: { sessionId: string; step: CapturedStep },
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: SocketRecorder,
   ) {
     // Solo el contenedor de ESA sesión puede inyectar pasos (evita spoofing entre sesiones).
     if (!this.isContainerOf(client, data.sessionId)) return;
@@ -111,7 +128,7 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /** Verifica el token del handshake: JWT de usuario o token de sesión del contenedor. */
-  private authenticate(client: Socket): SocketIdentity | null {
+  private authenticate(client: SocketRecorder): SocketIdentity | null {
     const token =
       (client.handshake.auth?.token as string | undefined) ??
       client.handshake.headers.authorization?.replace(/^Bearer\s+/i, '');
@@ -131,9 +148,9 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /** ¿Puede este cliente acceder a la sesión? Usuario de la misma org o el contenedor de la sesión. */
-  private canAccessSession(client: Socket, sessionId: string): boolean {
+  private canAccessSession(client: SocketRecorder, sessionId: string): boolean {
     if (!sessionId) return false;
-    const identity = client.data.identity as SocketIdentity | undefined;
+    const identity = client.data.identity;
     if (!identity) return false;
     if (identity.kind === 'recorder') return identity.sessionId === sessionId;
     const session = this.recorderService.getSession(sessionId);
@@ -141,8 +158,8 @@ export class RecorderGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   /** ¿Es este cliente el contenedor exacto de la sesión indicada? */
-  private isContainerOf(client: Socket, sessionId: string): boolean {
-    const identity = client.data.identity as SocketIdentity | undefined;
+  private isContainerOf(client: SocketRecorder, sessionId: string): boolean {
+    const identity = client.data.identity;
     return identity?.kind === 'recorder' && identity.sessionId === sessionId;
   }
 }

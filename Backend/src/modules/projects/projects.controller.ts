@@ -44,10 +44,7 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<ProjectResponseDto> {
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<ProjectResponseDto> {
     return this.projectsService.findById(id, user);
   }
 
@@ -64,10 +61,7 @@ export class ProjectsController {
   @Delete(':id')
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  archive(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<void> {
+  archive(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<void> {
     return this.projectsService.archive(id, user);
   }
 }

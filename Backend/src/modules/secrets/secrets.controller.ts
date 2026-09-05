@@ -1,5 +1,13 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -32,10 +40,7 @@ export class SecretsController {
   @Delete(':id')
   @Roles(MemberRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<void> {
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<void> {
     return this.secretsService.remove(id, user);
   }
 }

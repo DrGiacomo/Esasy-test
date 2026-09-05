@@ -13,7 +13,9 @@ const colorMap = {
 
 export function Badge({ label, color = 'gray' }: BadgeProps) {
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorMap[color]}`}>
+    <span
+      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${colorMap[color]}`}
+    >
       {label}
     </span>
   );

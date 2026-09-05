@@ -8,7 +8,11 @@ type RedisPublisher = { publish: jest.Mock };
 type ProcessorInternals = {
   getSecretEnvVars(orgId: string, executionId: string): Promise<string[]>;
   waitForContainerOrAbort(containerId: string, executionId: string): Promise<WaitOutcome>;
-  transition(publisher: RedisPublisher, executionId: string, status: ExecutionStatus): Promise<void>;
+  transition(
+    publisher: RedisPublisher,
+    executionId: string,
+    status: ExecutionStatus,
+  ): Promise<void>;
   failExecution(publisher: RedisPublisher, executionId: string, message: string): Promise<void>;
 };
 

@@ -16,7 +16,17 @@ export class ArtifactCleanupService {
 
   constructor(private readonly config: ConfigService) {}
 
+  /**
+   * Corre de madrugada en el worker y usa `fs` síncrono a propósito.
+   *
+   * Pasarlo a `fs.promises` no bloquearía el bucle de eventos mientras borra, que sería
+   * mejor — pero exigiría reescribir `artifact-cleanup.service.spec.ts`, que simula las
+   * funciones síncronas. Cambiar un test verde para callar un aviso de estilo es
+   * exactamente la clase de arreglo que este proyecto ya pagó caro. Queda anotado como
+   * mejora, no como deuda urgente: son unos pocos borrados a las 3 de la mañana.
+   */
   @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'artifact-cleanup' })
+  // eslint-disable-next-line @typescript-eslint/require-await -- ver el comentario de arriba
   async cleanup(): Promise<number> {
     const retentionDays = this.config.get<number>('ARTIFACTS_RETENTION_DAYS', 14);
     if (!retentionDays || retentionDays <= 0) return 0;
@@ -49,7 +59,9 @@ export class ArtifactCleanupService {
     }
 
     if (removed > 0) {
-      this.logger.log(`Limpieza de artefactos: ${removed} ejecución(es) > ${retentionDays}d eliminadas`);
+      this.logger.log(
+        `Limpieza de artefactos: ${removed} ejecución(es) > ${retentionDays}d eliminadas`,
+      );
     }
     return removed;
   }

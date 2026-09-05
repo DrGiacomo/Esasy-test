@@ -34,10 +34,9 @@ export default function App() {
     }
 
     api
-      .post<{ accessToken: string; refreshToken: string; expiresIn: number }>(
-        '/auth/refresh',
-        { refreshToken },
-      )
+      .post<{ accessToken: string; refreshToken: string; expiresIn: number }>('/auth/refresh', {
+        refreshToken,
+      })
       .then((res) => {
         const { accessToken, refreshToken: newRefresh } = res.data;
         tokenStorage.setRefreshToken(newRefresh);

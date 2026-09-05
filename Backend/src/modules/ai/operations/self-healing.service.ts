@@ -36,7 +36,13 @@ export class SelfHealingService {
   ) {}
 
   /** Propuesta solicitada manualmente por un usuario (endpoint /ai/heal). */
-  async propose(stepId: string, pageHtml: string, userId: string, orgId: string, screenshot?: string) {
+  async propose(
+    stepId: string,
+    pageHtml: string,
+    userId: string,
+    orgId: string,
+    screenshot?: string,
+  ) {
     const step = await this.findStep(stepId, orgId);
     if (!step) throw new NotFoundException('Test step not found');
 
@@ -90,7 +96,9 @@ export class SelfHealingService {
       }
 
       const log = await this.persistProposal(step, parsed);
-      this.logger.log(`Auto-heal: propuesta ${log.id} creada para step ${stepId} (conf ${parsed.confidence})`);
+      this.logger.log(
+        `Auto-heal: propuesta ${log.id} creada para step ${stepId} (conf ${parsed.confidence})`,
+      );
       return log;
     } catch (err) {
       this.logger.error(`Auto-heal falló para step ${stepId}: ${String(err)}`);
@@ -124,7 +132,13 @@ export class SelfHealingService {
     let result;
     try {
       result = await provider.complete(messages, undefined, { json: true });
-      await this.audit.log(userId, AiOperationType.SELF_HEALING, `Heal step: ${step.id}`, result, step.testId);
+      await this.audit.log(
+        userId,
+        AiOperationType.SELF_HEALING,
+        `Heal step: ${step.id}`,
+        result,
+        step.testId,
+      );
     } catch (err) {
       await this.audit.log(
         userId,

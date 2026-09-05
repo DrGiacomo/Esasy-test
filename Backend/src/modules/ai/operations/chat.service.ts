@@ -24,10 +24,12 @@ export class ChatService {
     // referenciado en el audit log, y un id inexistente rompía la FK → 500 tras pagar
     // la llamada a la IA. Se ignora si no pertenece a la org del usuario.
     const validTestId = relatedTestId
-      ? (await this.prisma.test.findFirst({
-          where: { id: relatedTestId, suite: { project: { organizationId: orgId } } },
-          select: { id: true },
-        }))?.id
+      ? (
+          await this.prisma.test.findFirst({
+            where: { id: relatedTestId, suite: { project: { organizationId: orgId } } },
+            select: { id: true },
+          })
+        )?.id
       : undefined;
 
     const withSystem: AiMessage[] = [
@@ -45,7 +47,13 @@ Be concise and practical.`,
       result = await this.ai.complete(withSystem);
       await this.audit.log(userId, AiOperationType.CHAT, 'Chat message', result, validTestId);
     } catch (err) {
-      await this.audit.log(userId, AiOperationType.CHAT, 'Chat message', { error: String(err) }, validTestId);
+      await this.audit.log(
+        userId,
+        AiOperationType.CHAT,
+        'Chat message',
+        { error: String(err) },
+        validTestId,
+      );
       throw err;
     }
 

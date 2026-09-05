@@ -26,7 +26,9 @@ export class ReportsService {
           include: {
             test: { select: { id: true, name: true } },
             stepResults: {
-              include: { step: { select: { id: true, order: true, action: true, description: true } } },
+              include: {
+                step: { select: { id: true, order: true, action: true, description: true } },
+              },
               orderBy: { createdAt: 'asc' },
             },
           },
@@ -63,7 +65,11 @@ export class ReportsService {
    * `token` se usa solo para los enlaces de video y traza, que no se pueden embeber por
    * tamano. Las capturas van dentro del archivo y no dependen de el.
    */
-  async getExecutionReportHtml(executionId: string, user: JwtPayload, token?: string): Promise<string> {
+  async getExecutionReportHtml(
+    executionId: string,
+    user: JwtPayload,
+    token?: string,
+  ): Promise<string> {
     const r = await this.getExecutionReport(executionId, user);
     const sufijo = token ? `?token=${encodeURIComponent(token)}` : '';
 

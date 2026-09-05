@@ -14,11 +14,7 @@ export class TestStepsService {
     private readonly versions: TestVersionsService,
   ) {}
 
-  async create(
-    testId: string,
-    dto: CreateStepDto,
-    user: JwtPayload,
-  ): Promise<StepResponseDto> {
+  async create(testId: string, dto: CreateStepDto, user: JwtPayload): Promise<StepResponseDto> {
     await this.assertTestOwnership(testId, user.orgId);
 
     return this.prisma.$transaction(async (tx) => {
@@ -52,7 +48,11 @@ export class TestStepsService {
     });
   }
 
-  async reorder(testId: string, dto: ReorderStepsDto, user: JwtPayload): Promise<StepResponseDto[]> {
+  async reorder(
+    testId: string,
+    dto: ReorderStepsDto,
+    user: JwtPayload,
+  ): Promise<StepResponseDto[]> {
     await this.assertTestOwnership(testId, user.orgId);
 
     return this.prisma.$transaction(async (tx) => {

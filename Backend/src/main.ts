@@ -31,4 +31,7 @@ async function bootstrap() {
   console.log(`Backend running on http://localhost:${port}/api/v1`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('El backend no pudo arrancar:', err);
+  process.exit(1);
+});

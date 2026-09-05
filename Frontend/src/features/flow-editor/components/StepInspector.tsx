@@ -1,6 +1,9 @@
 import type { TestStep } from '@/types/models';
 
-interface Props { step: TestStep | null; onChange: (changes: Partial<TestStep>) => void }
+interface Props {
+  step: TestStep | null;
+  onChange: (changes: Partial<TestStep>) => void;
+}
 
 const FIELDS: Record<string, { key: keyof TestStep; label: string; placeholder: string }[]> = {
   navigate: [{ key: 'selector', label: 'URL', placeholder: 'https://...' }],

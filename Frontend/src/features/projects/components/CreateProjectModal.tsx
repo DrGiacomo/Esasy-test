@@ -3,7 +3,11 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { projectsApi, type CreateProjectDto } from '../projects.api';
 
-interface Props { open: boolean; onClose: () => void; onCreated: () => void }
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}
 
 export function CreateProjectModal({ open, onClose, onCreated }: Props) {
   const [form, setForm] = useState<CreateProjectDto>({ name: '', baseUrl: '', description: '' });
@@ -12,7 +16,8 @@ export function CreateProjectModal({ open, onClose, onCreated }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       await projectsApi.create(form);
       onCreated();
@@ -20,7 +25,9 @@ export function CreateProjectModal({ open, onClose, onCreated }: Props) {
       setForm({ name: '', baseUrl: '', description: '' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear proyecto');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -48,7 +55,9 @@ export function CreateProjectModal({ open, onClose, onCreated }: Props) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Descripción (opcional)</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Descripción (opcional)
+          </label>
           <textarea
             rows={2}
             value={form.description}
@@ -58,8 +67,12 @@ export function CreateProjectModal({ open, onClose, onCreated }: Props) {
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-3">
-          <Button variant="secondary" type="button" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" loading={loading}>Crear proyecto</Button>
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" loading={loading}>
+            Crear proyecto
+          </Button>
         </div>
       </form>
     </Modal>

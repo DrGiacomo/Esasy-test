@@ -22,8 +22,11 @@ import { GeminiProvider } from './providers/gemini.provider';
     {
       provide: VISION_PROVIDER,
       inject: [ConfigService, GeminiProvider, DeepSeekProvider],
-      useFactory: (config: ConfigService, gemini: GeminiProvider, deepseek: DeepSeekProvider): AiProvider =>
-        config.get<string>('GEMINI_API_KEY') ? gemini : deepseek,
+      useFactory: (
+        config: ConfigService,
+        gemini: GeminiProvider,
+        deepseek: DeepSeekProvider,
+      ): AiProvider => (config.get<string>('GEMINI_API_KEY') ? gemini : deepseek),
     },
     AiAuditService,
     CodegenService,

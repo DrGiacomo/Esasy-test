@@ -40,7 +40,10 @@ describe('TestVersionsService — multi-tenant', () => {
     prisma.test.findFirst.mockResolvedValue({ id: 'test-1' });
     prisma.testVersion.findUnique.mockResolvedValue({ id: 'v-1', versionNumber: 1 });
 
-    await expect(service.findOne('test-1', 1, user)).resolves.toEqual({ id: 'v-1', versionNumber: 1 });
+    await expect(service.findOne('test-1', 1, user)).resolves.toEqual({
+      id: 'v-1',
+      versionNumber: 1,
+    });
   });
 });
 
@@ -66,7 +69,7 @@ describe('TestStepsService.reorder — multi-tenant', () => {
     tx.testStep.updateMany.mockResolvedValue({ count: 0 }); // el step es de otro test/org
 
     await expect(
-      service.reorder('test-1', { steps: [{ stepId: 'step-ajeno', order: 0 }] } as never, user),
+      service.reorder('test-1', { steps: [{ stepId: 'step-ajeno', order: 0 }] }, user),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(tx.testStep.updateMany).toHaveBeenCalledWith({
       where: { id: 'step-ajeno', testId: 'test-1' },
@@ -80,7 +83,12 @@ describe('TestStepsService.reorder — multi-tenant', () => {
 
     await service.reorder(
       'test-1',
-      { steps: [{ stepId: 's1', order: 1 }, { stepId: 's2', order: 0 }] } as never,
+      {
+        steps: [
+          { stepId: 's1', order: 1 },
+          { stepId: 's2', order: 0 },
+        ],
+      },
       user,
     );
     expect(tx.testStep.updateMany).toHaveBeenCalledTimes(2);

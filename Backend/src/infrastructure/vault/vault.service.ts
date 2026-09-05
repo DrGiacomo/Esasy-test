@@ -29,6 +29,10 @@ export class VaultService {
     const encrypted = buf.subarray(IV_LENGTH + TAG_LENGTH);
     const decipher = crypto.createDecipheriv(ALGORITHM, this.key, iv);
     decipher.setAuthTag(tag);
-    return decipher.update(encrypted) + decipher.final('utf8');
+    // `update(encrypted)` a secas devuelve un Buffer, y `Buffer + string` hace un
+    // toString() implicito sin encoding. Hoy funciona porque GCM procesa todo en una
+    // llamada, pero basta con que un caracter multibyte caiga en la frontera con
+    // final() para que el secreto salga corrupto. El encoding se declara.
+    return decipher.update(encrypted, undefined, 'utf8') + decipher.final('utf8');
   }
 }

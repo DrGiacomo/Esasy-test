@@ -25,7 +25,10 @@ export default function ExecutionDetailPage() {
   useEffect(() => {
     if (!executionId) return;
     Promise.all([executionsApi.getOne(executionId), executionsApi.getResults(executionId)])
-      .then(([ex, res]) => { setExecution(ex); setResults(res); })
+      .then(([ex, res]) => {
+        setExecution(ex);
+        setResults(res);
+      })
       .finally(() => setLoading(false));
   }, [executionId]);
 
@@ -53,6 +56,10 @@ export default function ExecutionDetailPage() {
     }, 3000);
 
     return () => clearInterval(interval);
+    // La regla pide `execution` entera en las dependencias, y no puede tenerla: este
+    // efecto ESCRIBE `execution` en cada vuelta del sondeo. Ponerla lo reiniciaría sin
+    // parar. Lo que de verdad debe reiniciarlo es que cambie el estado, y eso sí está.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionId, execution?.status, status]);
 
   async function handleCancel() {
@@ -68,7 +75,12 @@ export default function ExecutionDetailPage() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner />
+      </div>
+    );
   if (!execution) return <p className="text-gray-500">Ejecución no encontrada</p>;
 
   const displayStatus = status ?? execution.status;
@@ -82,7 +94,12 @@ export default function ExecutionDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {ACTIVE_STATUSES.includes(displayStatus) && (
-            <Button variant="danger" size="sm" loading={cancelling} onClick={() => void handleCancel()}>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={cancelling}
+              onClick={() => void handleCancel()}
+            >
               <XCircle size={14} />
               Cancelar
             </Button>
@@ -103,12 +120,12 @@ export default function ExecutionDetailPage() {
         </div>
       )}
 
-      {ACTIVE_STATUSES.includes(displayStatus) && (
-        <ExecutionProgressPanel events={events} />
-      )}
+      {ACTIVE_STATUSES.includes(displayStatus) && <ExecutionProgressPanel events={events} />}
 
       <div className="space-y-3">
-        {results.map((r) => <TestResultCard key={r.id} result={r} />)}
+        {results.map((r) => (
+          <TestResultCard key={r.id} result={r} />
+        ))}
       </div>
     </div>
   );

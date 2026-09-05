@@ -20,7 +20,9 @@ describe('AutoHealingService', () => {
 
   it('no hace nada si AUTO_HEALING_ENABLED es false', async () => {
     const { prisma, config, service } = build();
-    config.get.mockImplementation((k: string, def?: unknown) => (k === 'AUTO_HEALING_ENABLED' ? false : def));
+    config.get.mockImplementation((k: string, def?: unknown) =>
+      k === 'AUTO_HEALING_ENABLED' ? false : def,
+    );
 
     await service.run('exec-1', 'org-1');
 
@@ -42,7 +44,7 @@ describe('AutoHealingService', () => {
     prisma.execution.findUnique.mockResolvedValue({ triggeredBy: 'user-1' });
     mockedFs.existsSync.mockReturnValue(true);
     mockedFs.readFileSync.mockImplementation((p: never) =>
-      String(p).endsWith('.html') ? '<html/>' : (Buffer.from('img') as never),
+      String(p).endsWith('.html') ? '<html/>' : Buffer.from('img'),
     );
 
     await service.run('exec-1', 'org-1');

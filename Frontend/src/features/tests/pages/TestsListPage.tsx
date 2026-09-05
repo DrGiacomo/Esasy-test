@@ -19,7 +19,10 @@ export default function TestsListPage() {
 
   useEffect(() => {
     if (!suiteId) return;
-    testsApi.getBySuite(suiteId).then(setTests).finally(() => setLoading(false));
+    testsApi
+      .getBySuite(suiteId)
+      .then(setTests)
+      .finally(() => setLoading(false));
   }, [suiteId]);
 
   async function createTest(e: React.FormEvent) {
@@ -31,24 +34,38 @@ export default function TestsListPage() {
       setTests((p) => [...p, t]);
       setShowModal(false);
       setTestName('');
-    } finally { setCreating(false); }
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Tests</h1>
-        <Button onClick={() => setShowModal(true)}><Plus size={16} />Nuevo test</Button>
+        <Button onClick={() => setShowModal(true)}>
+          <Plus size={16} />
+          Nuevo test
+        </Button>
       </div>
 
-      {loading && <div className="flex justify-center py-12"><LoadingSpinner /></div>}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      )}
 
       {!loading && tests.length === 0 && (
         <EmptyState
           icon={<FlaskConical size={48} />}
           title="Sin tests todavía"
           description="Crea tu primer test o usa el grabador para capturar pasos automáticamente."
-          action={<Button onClick={() => setShowModal(true)}><Plus size={16} />Crear test</Button>}
+          action={
+            <Button onClick={() => setShowModal(true)}>
+              <Plus size={16} />
+              Crear test
+            </Button>
+          }
         />
       )}
 
@@ -77,8 +94,12 @@ export default function TestsListPage() {
             placeholder="Nombre del test"
           />
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Cancelar</Button>
-            <Button type="submit" loading={creating}>Crear</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" loading={creating}>
+              Crear
+            </Button>
           </div>
         </form>
       </Modal>

@@ -1,6 +1,13 @@
 import {
-  Body, Controller, Delete, Get, HttpCode, HttpStatus,
-  Param, Post, UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -39,27 +46,18 @@ export class ExecutionsController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<ExecutionResponseDto> {
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<ExecutionResponseDto> {
     return this.executionsService.findById(id, user);
   }
 
   @Get(':id/results')
-  findResults(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  findResults(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.executionsService.findResults(id, user);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  cancel(
-    @Param('id') id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<void> {
+  cancel(@Param('id') id: string, @CurrentUser() user: JwtPayload): Promise<void> {
     return this.executionsService.cancel(id, user);
   }
 }

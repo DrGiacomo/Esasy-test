@@ -39,10 +39,7 @@ api.interceptors.response.use(
     try {
       if (!refreshing) {
         refreshing = api
-          .post<{ accessToken: string; refreshToken: string }>(
-            '/auth/refresh',
-            { refreshToken },
-          )
+          .post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken })
           .then((res) => {
             const { accessToken, refreshToken: newRefresh } = res.data;
             useAuthStore.getState().setAccessToken(accessToken);

@@ -8,4 +8,7 @@ async function bootstrap() {
   console.log('Worker process running');
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('El worker no pudo arrancar:', err);
+  process.exit(1);
+});

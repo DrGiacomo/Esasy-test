@@ -26,9 +26,21 @@ export class CodegenService {
     let result;
     try {
       result = await this.ai.complete(messages, 'deepseek-coder');
-      await this.audit.log(userId, AiOperationType.CODEGEN, `Codegen for test: ${test.name}`, result, testId);
+      await this.audit.log(
+        userId,
+        AiOperationType.CODEGEN,
+        `Codegen for test: ${test.name}`,
+        result,
+        testId,
+      );
     } catch (err) {
-      await this.audit.log(userId, AiOperationType.CODEGEN, `Codegen for test: ${test.name}`, { error: String(err) }, testId);
+      await this.audit.log(
+        userId,
+        AiOperationType.CODEGEN,
+        `Codegen for test: ${test.name}`,
+        { error: String(err) },
+        testId,
+      );
       throw err;
     }
 

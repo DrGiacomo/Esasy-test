@@ -17,7 +17,10 @@ export default function ExecutionsListPage() {
   const [actionId, setActionId] = useState<string | null>(null);
 
   useEffect(() => {
-    executionsApi.getAll().then(setExecutions).finally(() => setLoading(false));
+    executionsApi
+      .getAll()
+      .then(setExecutions)
+      .finally(() => setLoading(false));
   }, []);
 
   async function handleRemove(e: React.MouseEvent, execution: Execution) {
@@ -42,7 +45,11 @@ export default function ExecutionsListPage() {
     <div>
       <h1 className="mb-6 text-xl font-bold text-gray-900">Ejecuciones</h1>
 
-      {loading && <div className="flex justify-center py-12"><LoadingSpinner /></div>}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      )}
 
       {!loading && executions.length === 0 && (
         <EmptyState
@@ -57,14 +64,21 @@ export default function ExecutionsListPage() {
           {executions.map((e) => {
             const isActive = ACTIVE_STATUSES.includes(e.status);
             return (
-              <div key={e.id} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-indigo-200">
+              <div
+                key={e.id}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-indigo-200"
+              >
                 <Link
                   to={ROUTES.EXECUTION_DETAIL(e.id)}
                   className="flex flex-1 items-center gap-4 min-w-0"
                 >
                   <StatusBadge status={e.status} />
-                  <span className="flex-1 text-sm text-gray-700 font-mono">{e.id.slice(0, 8)}…</span>
-                  <span className="text-xs text-gray-400">{new Date(e.createdAt).toLocaleString()}</span>
+                  <span className="flex-1 text-sm text-gray-700 font-mono">
+                    {e.id.slice(0, 8)}…
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </span>
                   <ChevronRight size={16} className="text-gray-400" />
                 </Link>
                 <Button

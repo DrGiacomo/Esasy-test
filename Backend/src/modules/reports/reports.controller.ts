@@ -9,10 +9,7 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get(':executionId')
-  getReport(
-    @Param('executionId') executionId: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  getReport(@Param('executionId') executionId: string, @CurrentUser() user: JwtPayload) {
     return this.reportsService.getExecutionReport(executionId, user);
   }
 

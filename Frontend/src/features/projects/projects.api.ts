@@ -1,8 +1,16 @@
 import { api } from '@/lib/api/axios.client';
 import type { Project, TestSuite } from '@/types/models';
 
-export interface CreateProjectDto { name: string; baseUrl: string; description?: string }
-export interface UpdateProjectDto { name?: string; baseUrl?: string; description?: string }
+export interface CreateProjectDto {
+  name: string;
+  baseUrl: string;
+  description?: string;
+}
+export interface UpdateProjectDto {
+  name?: string;
+  baseUrl?: string;
+  description?: string;
+}
 
 export const projectsApi = {
   getAll: (archived = false) =>

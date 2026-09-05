@@ -60,8 +60,13 @@ export interface ReportView {
   tests: ReportTestView[];
 }
 
-/** Escapa texto para meterlo en HTML. Todo lo que venga de la base pasa por aquí. */
-function esc(v: unknown): string {
+/**
+ * Escapa texto para meterlo en HTML. Todo lo que venga de la base pasa por aquí.
+ *
+ * Acepta solo lo que se puede convertir a texto sin sorpresas: con `unknown`, pasarle un
+ * objeto por error daba «[object Object]» dentro del informe, en silencio.
+ */
+function esc(v: string | number | null | undefined): string {
   return String(v ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

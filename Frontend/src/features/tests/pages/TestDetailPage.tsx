@@ -6,7 +6,6 @@ import { executionsApi } from '@/features/executions/executions.api';
 import { api } from '@/lib/api/axios.client';
 import type { Test, TestStep } from '@/types/models';
 import { Button } from '@/components/ui/Button';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StepList } from '../components/StepList';
 import { ROUTES } from '@/router/routes';
@@ -16,13 +15,18 @@ export default function TestDetailPage() {
   const { sencillo } = useUiMode();
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
-  const [test, setTest] = useState<(Test & { steps: TestStep[]; suite?: { projectId: string } }) | null>(null);
+  const [test, setTest] = useState<
+    (Test & { steps: TestStep[]; suite?: { projectId: string } }) | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
 
   useEffect(() => {
     if (!testId) return;
-    testsApi.getOne(testId).then(setTest).finally(() => setLoading(false));
+    testsApi
+      .getOne(testId)
+      .then(setTest)
+      .finally(() => setLoading(false));
   }, [testId]);
 
   async function handleRun() {
@@ -32,21 +36,34 @@ export default function TestDetailPage() {
       // Get projectId from suite (included in response), or fetch from suite endpoint as fallback
       let projectId = test.suite?.projectId;
       if (!projectId) {
-        const suite = await api.get<{ projectId: string }>(`/suites/${test.suiteId}`).then(r => r.data);
+        const suite = await api
+          .get<{ projectId: string }>(`/suites/${test.suiteId}`)
+          .then((r) => r.data);
         projectId = suite.projectId;
       }
       if (test.status !== 'ACTIVE') {
         const updated = await testsApi.update(test.id, { status: 'ACTIVE' });
-        setTest((prev) => prev ? { ...prev, status: updated.status } : prev);
+        setTest((prev) => (prev ? { ...prev, status: updated.status } : prev));
       }
-      const execution = await executionsApi.trigger({ projectId, suiteId: test.suiteId, testId: test.id });
+      const execution = await executionsApi.trigger({
+        projectId,
+        suiteId: test.suiteId,
+        testId: test.id,
+      });
       navigate(`/executions/${execution.id}`);
     } catch (err) {
       alert(`Error al ejecutar: ${err instanceof Error ? err.message : String(err)}`);
-    } finally { setRunning(false); }
+    } finally {
+      setRunning(false);
+    }
   }
 
-  if (loading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <LoadingSpinner />
+      </div>
+    );
   if (!test) return <p className="text-gray-500">Test no encontrado</p>;
 
   return (
@@ -61,7 +78,7 @@ export default function TestDetailPage() {
             value={test.status}
             onChange={async (e) => {
               const updated = await testsApi.update(test.id, { status: e.target.value });
-              setTest((prev) => prev ? { ...prev, status: updated.status } : prev);
+              setTest((prev) => (prev ? { ...prev, status: updated.status } : prev));
             }}
             className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium focus:outline-none focus:border-indigo-500"
           >
@@ -104,8 +121,8 @@ export default function TestDetailPage() {
           </div>
           {test.documentedAt && (
             <p className="mt-3 text-xs text-gray-400">
-              Generado por IA el {new Date(test.documentedAt).toLocaleString('es-ES')}.
-              Si los pasos cambiaron después, vuelve a generarla.
+              Generado por IA el {new Date(test.documentedAt).toLocaleString('es-ES')}. Si los pasos
+              cambiaron después, vuelve a generarla.
             </p>
           )}
         </div>

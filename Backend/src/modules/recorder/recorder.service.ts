@@ -50,10 +50,15 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
         filters: { label: ['e2e.recorder'] },
       });
       for (const c of orphans) {
-        await this.docker.getContainer(c.Id).remove({ force: true }).catch(() => null);
+        await this.docker
+          .getContainer(c.Id)
+          .remove({ force: true })
+          .catch(() => null);
       }
       if (orphans.length > 0) {
-        this.logger.warn(`Reaped ${orphans.length} orphaned recorder container(s) from a previous run`);
+        this.logger.warn(
+          `Reaped ${orphans.length} orphaned recorder container(s) from a previous run`,
+        );
       }
     } catch (err) {
       this.logger.warn(`Recorder orphan sweep skipped: ${String(err)}`);
@@ -75,7 +80,9 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
 
     const images = await this.docker.listImages({ filters: { reference: [image] } });
     if (images.length === 0) {
-      throw new Error(`Docker image "${image}" not found. Run: docker compose --profile build-images build`);
+      throw new Error(
+        `Docker image "${image}" not found. Run: docker compose --profile build-images build`,
+      );
     }
 
     // Token de sesión firmado para que el contenedor se autentique en el gateway WS.
@@ -167,7 +174,7 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
     });
     if (!suite) throw new NotFoundException('Test suite not found');
 
-    const rawSteps = (rec.steps as unknown as CapturedStep[]);
+    const rawSteps = rec.steps as unknown as CapturedStep[];
     const mappedSteps = this.collapseSteps(rawSteps);
 
     return this.prisma.$transaction(async (tx) => {
@@ -233,22 +240,57 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
         return { action: 'navigate', value: step.url, description: `Ir a ${step.url}` };
       case 'click':
         return step.selector
-          ? { action: 'click', selector: step.selector, selectorType: stype, description: `Pulsar ${que}` }
-          : { action: 'click', value: JSON.stringify({ x: step.x, y: step.y }), description: `Pulsar en ${que}` };
+          ? {
+              action: 'click',
+              selector: step.selector,
+              selectorType: stype,
+              description: `Pulsar ${que}`,
+            }
+          : {
+              action: 'click',
+              value: JSON.stringify({ x: step.x, y: step.y }),
+              description: `Pulsar en ${que}`,
+            };
       case 'dblclick':
         return step.selector
-          ? { action: 'dblclick', selector: step.selector, selectorType: stype, description: `Pulsar dos veces ${que}` }
-          : { action: 'dblclick', value: JSON.stringify({ x: step.x, y: step.y }), description: `Pulsar dos veces en ${que}` };
+          ? {
+              action: 'dblclick',
+              selector: step.selector,
+              selectorType: stype,
+              description: `Pulsar dos veces ${que}`,
+            }
+          : {
+              action: 'dblclick',
+              value: JSON.stringify({ x: step.x, y: step.y }),
+              description: `Pulsar dos veces en ${que}`,
+            };
       case 'fill':
-        return { action: 'fill', selector: step.selector, selectorType: stype, value: step.value, description: `Escribir "${step.value}" en ${que}` };
+        return {
+          action: 'fill',
+          selector: step.selector,
+          selectorType: stype,
+          value: step.value,
+          description: `Escribir "${step.value}" en ${que}`,
+        };
       case 'type':
         return { action: 'fill', value: step.value, description: `Escribir "${step.value}"` };
       case 'press':
         return { action: 'press', value: step.key, description: `Pulsar la tecla ${step.key}` };
       case 'select':
-        return { action: 'select', selector: step.selector, selectorType: stype, value: step.value, description: `Elegir "${step.value}" en ${que}` };
+        return {
+          action: 'select',
+          selector: step.selector,
+          selectorType: stype,
+          value: step.value,
+          description: `Elegir "${step.value}" en ${que}`,
+        };
       case 'hover':
-        return { action: 'hover', selector: step.selector, selectorType: stype, description: `Poner el raton sobre ${que}` };
+        return {
+          action: 'hover',
+          selector: step.selector,
+          selectorType: stype,
+          description: `Poner el raton sobre ${que}`,
+        };
       default:
         return { action: step.type, description: step.type };
     }
