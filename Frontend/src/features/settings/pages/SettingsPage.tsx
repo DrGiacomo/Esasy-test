@@ -2,19 +2,25 @@ import { useState } from 'react';
 import { MembersPanel } from '../components/MembersPanel';
 import { SecretsPanel } from '../components/SecretsPanel';
 import { GitIntegrationPanel } from '../components/GitIntegrationPanel';
+import { UiModePanel } from '../components/UiModePanel';
+import { useUiMode } from '@/hooks/useUiMode';
 
-const TABS = ['Miembros', 'Secretos', 'Git'] as const;
+// 'Git' solo aparece en modo complejo: sincronizar con un repositorio es exactamente
+// lo que el §2.1 llama «no exponer» al perfil que no programa.
+const TABS = ['Vista', 'Miembros', 'Secretos', 'Git'] as const;
 type Tab = typeof TABS[number];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>('Miembros');
+  const { sencillo } = useUiMode();
+  const [tab, setTab] = useState<Tab>('Vista');
+  const tabs = TABS.filter((t) => !(sencillo && t === 'Git'));
 
   return (
     <div>
       <h1 className="mb-6 text-xl font-bold text-gray-900">Configuración</h1>
 
       <div className="mb-6 flex border-b border-gray-200">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -29,9 +35,10 @@ export default function SettingsPage() {
         ))}
       </div>
 
+      {tab === 'Vista' && <UiModePanel />}
       {tab === 'Miembros' && <MembersPanel />}
       {tab === 'Secretos' && <SecretsPanel />}
-      {tab === 'Git' && <GitIntegrationPanel />}
+      {tab === 'Git' && !sencillo && <GitIntegrationPanel />}
     </div>
   );
 }

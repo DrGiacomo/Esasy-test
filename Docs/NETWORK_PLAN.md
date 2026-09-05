@@ -1,8 +1,9 @@
 # NETWORK PLAN — Plano de Red y Protocolo WebSocket/CDP
 
-> **Estado:** Fase 1 — Diseño y Arquitectura  
-> **Versión del documento:** 1.0.0  
-> **Última actualización:** 2026-05-25
+> **Estado del proyecto:** vive en [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) §6 — este
+> documento no declara fase.  
+> **Versión del documento:** 1.0.0 · entregable de la Fase 1, cerrada el 2026-05-25  
+> **Última revisión:** 2026-09-04
 
 ---
 
@@ -469,6 +470,9 @@ NODE_ENV=development
 ---
 
 ## 9. Checklist de Cierre — Fase 1
+
+> **Registro histórico, no estado actual.** La Fase 1 se cerró el **2026-05-25** (`45d5597`).
+> Las fases 2 y 3 también están cerradas y la 4 está abierta — ver `PROJECT_CONTEXT.md` §6.
 
 | Entregable | Estado |
 |---|---|

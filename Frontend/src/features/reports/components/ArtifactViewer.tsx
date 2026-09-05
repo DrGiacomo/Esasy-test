@@ -1,5 +1,6 @@
 import { Image, FileCode } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useUiMode } from '@/hooks/useUiMode';
 
 interface Props {
   screenshotUrl: string | null;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
+  const { sencillo } = useUiMode();
   // Los artefactos se sirven autenticados; <video>/<a> no mandan headers,
   // así que el token de acceso viaja en query string.
   const token = useAuthStore((s) => s.accessToken);
@@ -16,7 +18,9 @@ export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
 
   const screenshot = withToken(screenshotUrl);
   const video = withToken(videoUrl);
-  const trace = withToken(traceUrl);
+  // La traza es un .zip que solo se abre con herramientas de Playwright: artefacto
+  // de programador, fuera del modo sencillo. El video y la captura se quedan.
+  const trace = sencillo ? null : withToken(traceUrl);
 
   if (!screenshot && !video && !trace) return null;
 

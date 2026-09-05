@@ -5,14 +5,38 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { MemberRole } from '@prisma/client';
+import { MemberRole, Prisma, UiMode } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
+import { parseDurationToSeconds } from '../../common/util/duration';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
+import { MeDto } from './dto/me.dto';
 import { RegisterDto } from './dto/register.dto';
+
+/** Intentos de `register` antes de rendirse con el slug de la organización. */
+const REGISTER_MAX_ATTEMPTS = 5;
+
+/** Respaldos si `JWT_EXPIRES_IN` / `REFRESH_TOKEN_EXPIRES_IN` faltan o vienen rotos. */
+const DEFAULT_ACCESS_TOKEN_SECONDS = 15 * 60;
+const DEFAULT_REFRESH_TOKEN_SECONDS = 7 * 24 * 60 * 60;
+
+/**
+ * `true` si el error es una violación de índice único de Prisma (P2002) sobre el
+ * campo dado. `meta.target` llega como lista de columnas (o como cadena en algún
+ * conector), así que se comprueban las dos formas.
+ */
+function isUniqueViolationOn(error: unknown, field: string): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code !== 'P2002') return false;
+
+  const target = error.meta?.target;
+  if (Array.isArray(target)) return target.includes(field);
+  if (typeof target === 'string') return target.includes(field);
+  return false;
+}
 
 @Injectable()
 export class AuthService {
@@ -29,22 +53,40 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const slug = await this.uniqueSlug(dto.organizationName);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: { email: dto.email, displayName: dto.displayName, passwordHash },
-      });
-      const org = await tx.organization.create({
-        data: { name: dto.organizationName, slug },
-      });
-      const membership = await tx.membership.create({
-        data: { userId: user.id, organizationId: org.id, role: MemberRole.ADMIN },
-      });
-      return { user, org, membership };
-    });
+    // Entre el findUnique de arriba y el create de abajo cabe otro registro con el
+    // mismo email; entre «este slug está libre» y su create cabe otra organización
+    // con el mismo nombre. Los dos llegan como P2002 y antes salían por el 500:
+    // el email es un 409 y el slug se reintenta con el sufijo siguiente.
+    for (let attempt = 0; attempt < REGISTER_MAX_ATTEMPTS; attempt++) {
+      const slug = await this.freeSlug(dto.organizationName);
+      try {
+        const result = await this.prisma.$transaction(async (tx) => {
+          const user = await tx.user.create({
+            data: { email: dto.email, displayName: dto.displayName, passwordHash },
+          });
+          const org = await tx.organization.create({
+            data: { name: dto.organizationName, slug },
+          });
+          const membership = await tx.membership.create({
+            data: { userId: user.id, organizationId: org.id, role: MemberRole.ADMIN },
+          });
+          return { user, org, membership };
+        });
 
-    return this.issueTokens(result.user.id, result.org.id, result.membership.role);
+        return this.issueTokens(result.user.id, result.org.id, result.membership.role);
+      } catch (error) {
+        if (isUniqueViolationOn(error, 'email')) {
+          throw new ConflictException('Email already registered');
+        }
+        if (isUniqueViolationOn(error, 'slug')) continue;
+        throw error;
+      }
+    }
+
+    throw new ConflictException(
+      'Could not allocate an organization slug; try a different organization name',
+    );
   }
 
   async login(
@@ -112,6 +154,41 @@ export class AuthService {
     });
   }
 
+  /**
+   * Quién soy, leído de la base en cada llamada — no del token.
+   *
+   * `uiMode` cambia sin volver a entrar, así que no puede vivir en el JWT: si viviera ahí,
+   * el usuario pulsaría el interruptor y no pasaría nada hasta el siguiente login.
+   */
+  async me(userId: string, orgId: string): Promise<MeDto> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, isActive: true },
+      select: { id: true, email: true, displayName: true, uiMode: true },
+    });
+    if (!user) throw new UnauthorizedException('User not found');
+
+    const membership = await this.prisma.membership.findFirst({
+      where: { userId, organizationId: orgId },
+      select: { role: true },
+    });
+    if (!membership) throw new UnauthorizedException('User is not a member of this organization');
+
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      orgId,
+      role: membership.role,
+      uiMode: user.uiMode,
+    };
+  }
+
+  /** Cambia el modo de interfaz del propio usuario. No lo puede cambiar nadie por él. */
+  async updateUiMode(userId: string, orgId: string, uiMode: UiMode): Promise<MeDto> {
+    await this.prisma.user.update({ where: { id: userId }, data: { uiMode } });
+    return this.me(userId, orgId);
+  }
+
   private async issueTokens(
     userId: string,
     orgId: string,
@@ -136,7 +213,11 @@ export class AuthService {
       },
     });
 
-    return { accessToken, refreshToken: rawRefresh, expiresIn: 900 };
+    return {
+      accessToken,
+      refreshToken: rawRefresh,
+      expiresIn: this.accessTokenSeconds(),
+    };
   }
 
   private async resolveOrgId(userId: string, orgId?: string): Promise<string> {
@@ -153,15 +234,33 @@ export class AuthService {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  private refreshExpiry(): Date {
-    const expiry = this.config.get<string>('REFRESH_TOKEN_EXPIRES_IN', '7d');
-    const days = parseInt(expiry.replace('d', ''), 10) || 7;
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date;
+  /**
+   * Segundos de vida del access token, leídos de `JWT_EXPIRES_IN`. Antes iba
+   * quemado a 900: si alguien cambiaba la variable, el cliente seguía oyendo
+   * «15 minutos» y refrescaba tarde (o pronto de más).
+   */
+  private accessTokenSeconds(): number {
+    return parseDurationToSeconds(
+      this.config.get<string>('JWT_EXPIRES_IN'),
+      DEFAULT_ACCESS_TOKEN_SECONDS,
+    );
   }
 
-  private async uniqueSlug(name: string): Promise<string> {
+  private refreshExpiry(): Date {
+    // Antes: `parseInt(expiry.replace('d', ''))` — con `'24h'` daba 24 y lo trataba
+    // como 24 DÍAS. El parser entiende s/m/h/d/w y un número suelto como segundos.
+    const seconds = parseDurationToSeconds(
+      this.config.get<string>('REFRESH_TOKEN_EXPIRES_IN'),
+      DEFAULT_REFRESH_TOKEN_SECONDS,
+    );
+    return new Date(Date.now() + seconds * 1000);
+  }
+
+  /**
+   * Devuelve un slug libre *en este momento*. No garantiza que lo siga estando al
+   * hacer el insert — eso lo resuelve el reintento de `register` ante el P2002.
+   */
+  private async freeSlug(name: string): Promise<string> {
     const base = name
       .toLowerCase()
       .normalize('NFD')

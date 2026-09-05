@@ -54,6 +54,12 @@ export interface TestSuite {
   createdAt: string;
 }
 
+/**
+ * Como ve la plataforma un usuario. Son DOS y solo dos, y el rol no influye.
+ * SENCILLO es el defecto para todo el mundo; pasar a COMPLEJO lo decide cada uno.
+ */
+export type UiMode = 'SENCILLO' | 'COMPLEJO';
+
 export interface TestStep {
   id: string;
   testId: string;
@@ -70,6 +76,9 @@ export interface TestStep {
 export interface Test {
   id: string;
   name: string;
+  /** Explicación en lenguaje llano generada por IA. Se ve en los dos modos. */
+  documentation?: string | null;
+  documentedAt?: string | null;
   description: string | null;
   suiteId: string;
   status: TestStatus;

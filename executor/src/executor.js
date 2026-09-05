@@ -166,19 +166,30 @@ async function runTest(browser, db, redis, row) {
 
   let context;
   let page;
+  let tracing = false;           // si la traza llego a arrancar, hay que pararla en el finally
   let failedIndex = -1;          // índice del paso que falló (-1 = fallo de setup)
+  let failedStepStart = null;    // instante en que arranco el paso que falla, para su duracion real
   const stepResults = [];        // collect results in-memory, bulk-insert at the end
 
   try {
     // Dentro del try: si newContext/newPage fallan, el test se marca FAILED en vez de
     // quedar atascado en RUNNING (la excepción ya no escapa de runTest).
     context = await browser.newContext(contextOptions);
+
+    // Traza de Playwright. El colector ya la buscaba como `${test_id}.zip` y la columna
+    // `traceUrl` existe desde el diseno: el unico extremo que faltaba era este, el que la
+    // produce. Best-effort — una traza que no arranca no puede tumbar la ejecucion.
+    tracing = await context.tracing.start({ screenshots: true, snapshots: true })
+      .then(() => true)
+      .catch((err) => { console.warn(`[executor] tracing no disponible: ${err}`); return false; });
+
     page = await context.newPage();
 
     for (let i = 0; i < activeSteps.length; i++) {
       const step = activeSteps[i];
       console.log(`[executor]   step [${step.action}] ${step.selector ?? step.value ?? ''}`);
       const stepStart = Date.now();
+      failedStepStart = stepStart;
       failedStepId = step.id;
       failedIndex = i;
 
@@ -202,7 +213,11 @@ async function runTest(browser, db, redis, row) {
     }
 
     if (failedStepId) {
-      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: 0, errorDetails: errorMessage, screenshotUrl: failureScreenshotUrl });
+      // Antes iba con `durationMs: 0` y el paso fallido salia en el reporte como
+      // instantaneo — justo el que interesa cronometrar. Hallazgo BAJO del audit
+      // 2026-07-12, cerrado el 2026-09-04.
+      const failedDuration = failedStepStart !== null ? Date.now() - failedStepStart : 0;
+      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: failedDuration, errorDetails: errorMessage, screenshotUrl: failureScreenshotUrl });
     }
 
     await publish(redis, 'result:step-failed', { testId: test_id, stepId: failedStepId }).catch(() => null);
@@ -227,6 +242,14 @@ async function runTest(browser, db, redis, row) {
       const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
       const timeout = new Promise(r => setTimeout(r, 15000)); // max 15s to save video
       await Promise.race([page.video()?.saveAs(videoPath).catch(() => null), timeout]);
+    }
+    if (tracing && context) {
+      // Antes de cerrar el contexto: despues de context.close() la traza ya no se puede sacar.
+      const tracePath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.zip`);
+      await Promise.race([
+        context.tracing.stop({ path: tracePath }).catch(() => null),
+        new Promise(r => setTimeout(r, 15000)),
+      ]);
     }
     if (context) {
       await Promise.race([context.close(), new Promise(r => setTimeout(r, 10000))]);

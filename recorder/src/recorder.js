@@ -27,26 +27,49 @@ function buildSelectorInPage(el) {
   const esc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&'));
   const stableId = (v) => v && !/[:.]/.test(v) && !/\d{4,}/.test(v);
 
+  // Como LLAMA UNA PERSONA a este elemento. Va aparte del selector a proposito: el modo
+  // sencillo ensena esto («Pulsar «Entrar»») y el selector queda detras del desplegable.
+  // Sin esto, la descripcion del paso acababa siendo «Click en #btn-login», que es un
+  // selector con una frase delante — justo lo que el perfil No-Code no debe ver.
+  const humanLabel = (function () {
+    const clean = (v) => {
+      if (!v) return null;
+      const t = String(v).trim().replace(/\s+/g, ' ');
+      return t && t.length <= 60 ? t : null;
+    };
+    return (
+      clean(el.getAttribute('aria-label')) ||
+      clean(el.getAttribute('placeholder')) ||
+      clean(el.getAttribute('title')) ||
+      clean(el.getAttribute('alt')) ||
+      clean(el.textContent) ||
+      clean(el.getAttribute('name')) ||
+      clean(el.value) ||
+      null
+    );
+  })();
+  const withLabel = (r) => Object.assign({ label: humanLabel }, r);
+
   for (const attr of ['data-testid', 'data-test-id', 'data-test', 'data-cy', 'data-qa']) {
     const v = el.getAttribute(attr);
-    if (v) return { selector: `[${attr}="${v}"]`, selectorType: 'testId' };
+    if (v) return withLabel({ selector: `[${attr}="${v}"]`, selectorType: 'testId' });
   }
 
   const id = el.getAttribute('id');
-  if (stableId(id)) return { selector: `#${esc(id)}`, selectorType: 'css' };
+  if (stableId(id)) return withLabel({ selector: `#${esc(id)}`, selectorType: 'css' });
 
   const aria = el.getAttribute('aria-label');
-  if (aria) return { selector: `[aria-label="${aria}"]`, selectorType: 'css' };
+  if (aria) return withLabel({ selector: `[aria-label="${aria}"]`, selectorType: 'css' });
 
   const tag = el.tagName.toLowerCase();
   const name = el.getAttribute('name');
-  if (name) return { selector: `${tag}[name="${name}"]`, selectorType: 'css' };
+  if (name) return withLabel({ selector: `${tag}[name="${name}"]`, selectorType: 'css' });
 
   const role = el.getAttribute('role');
   const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
   const isClickable = tag === 'button' || tag === 'a' || role === 'button' || el.type === 'submit';
   if (isClickable && text && text.length <= 50) {
-    return { selector: `text="${text}"`, selectorType: 'text' };
+    return withLabel({ selector: `text="${text}"`, selectorType: 'text' });
   }
 
   let css = tag;
@@ -61,7 +84,7 @@ function buildSelectorInPage(el) {
       if (stableId(pid)) css = `#${esc(pid)} > ${css}`;
     }
   } catch (_) {}
-  return { selector: css, selectorType: 'css' };
+  return withLabel({ selector: css, selectorType: 'css' });
 }
 
 async function main() {

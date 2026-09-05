@@ -1,11 +1,15 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Req } from '@nestjs/common';
 import type { Request } from 'express';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
+import { MeDto } from './dto/me.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -36,5 +40,20 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   logout(@Body() dto: RefreshDto): Promise<void> {
     return this.authService.logout(dto.refreshToken);
+  }
+
+  /** Quién soy y cómo veo la plataforma. El frontend lo pide al entrar y al recargar. */
+  @Get('me')
+  me(@CurrentUser() user: JwtPayload): Promise<MeDto> {
+    return this.authService.me(user.sub, user.orgId);
+  }
+
+  /** Cambiar el modo de interfaz. Cualquier rol puede cambiar el suyo — y solo el suyo. */
+  @Patch('me/preferences')
+  updatePreferences(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdatePreferencesDto,
+  ): Promise<MeDto> {
+    return this.authService.updateUiMode(user.sub, user.orgId, dto.uiMode);
   }
 }

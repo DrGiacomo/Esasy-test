@@ -25,6 +25,11 @@ export class CodegenRequestDto {
   testId: string;
 }
 
+export class DocumentationRequestDto {
+  @IsUUID()
+  testId: string;
+}
+
 export class NlToFlowRequestDto {
   @IsString()
   prompt: string;

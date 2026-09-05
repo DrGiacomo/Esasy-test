@@ -98,9 +98,14 @@ export class MembershipsService {
   async remove(orgId: string, targetUserId: string, user: JwtPayload): Promise<void> {
     this.assertSameOrg(orgId, user.orgId);
 
-    // Un usuario puede removerse a sí mismo salvo que sea el último ADMIN
-    if (targetUserId !== user.sub) {
-      // Solo ADMIN puede remover a otros (el RoleGuard ya lo verificó, esto es doble check)
+    // Quitar a OTRO es cosa de ADMIN; salir uno mismo lo puede hacer cualquiera.
+    //
+    // Antes esto era un `if` vacío con un comentario que decía «el RoleGuard ya lo
+    // verificó, esto es doble check». Ni había doble check ni el RoleGuard verificaba
+    // eso: la ruta entera era ADMIN-only, así que un EDITOR o un VIEWER no podían
+    // abandonar la organización ni queriendo. Hallazgo BAJO del audit 2026-07-12.
+    if (targetUserId !== user.sub && user.role !== MemberRole.ADMIN) {
+      throw new ForbiddenException('Only an ADMIN can remove other members');
     }
 
     const membership = await this.findMembershipOrThrow(targetUserId, orgId);

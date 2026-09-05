@@ -48,6 +48,11 @@ Orientada a producción, modular, extensible. Combina grabación visual, generac
 
 ## Schema de base de datos — YA DISEÑADO
 
+> ⚠️ **Manda `Backend/prisma/schema.prisma` en disco, no la lista de abajo.** Hay 4
+> migraciones aplicadas desde que se escribió este documento (la última,
+> `20260712170000_refresh_token_org`), más las políticas RLS de `Backend/prisma/rls/`.
+> La lista sirve para entender el dominio; para saber qué columnas hay, se abre el schema.
+
 El archivo `prisma/schema.prisma` ya existe y está completo. **No regenerar ni modificar el schema a menos que se pida explícitamente.**
 
 ### Modelos existentes y su propósito
@@ -119,14 +124,19 @@ SecretType:       ENV_VAR | GIT_TOKEN | WEBHOOK_SECRET
 
 ---
 
-## Fase actual: Fase 1 — Solo diseño
+## Fase actual
 
-Los entregables pendientes son:
-1. ✅ `schema.prisma` — COMPLETADO
-2. ⏳ Estructura de carpetas detallada (Frontend + Backend)
-3. ⏳ Plano de red y protocolo WebSocket/CDP
+> **El estado de fases vive en `PROJECT_CONTEXT.md` §6 y solo ahí.** Este documento no lo
+> declara: cuando lo declaraba, se quedó tres meses diciendo «Fase 1 — Solo diseño» y
+> ordenando **«no escribir código de implementación»** mientras se construía la plataforma
+> entera. Cualquiera que llegue aquí buscando dónde estamos, va a §6.
 
-**No escribir código de implementación hasta que la Fase 1 esté completa.**
+**Fases 1-3 cerradas. Fase 4 (Producto usable) abierta.** Se implementa contra los
+entregables de la Fase 4; lo que no esté ahí, entra primero en `Docs/PENDIENTES.md`.
+
+Lo que sí manda desde este documento, y no caduca: el rol, el stack, las decisiones de
+arquitectura, los perfiles de usuario, los principios de diseño y las convenciones de
+código. Todo eso sigue vigente.
 
 ---
 

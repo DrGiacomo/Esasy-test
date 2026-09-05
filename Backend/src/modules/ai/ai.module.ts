@@ -4,6 +4,7 @@ import { AiController } from './ai.controller';
 import { AiAuditService } from './audit/ai-audit.service';
 import { ChatService } from './operations/chat.service';
 import { CodegenService } from './operations/codegen.service';
+import { DocumentationService } from './operations/documentation.service';
 import { NlToFlowService } from './operations/nl-to-flow.service';
 import { SelfHealingService } from './operations/self-healing.service';
 import { AI_PROVIDER, AiProvider, VISION_PROVIDER } from './providers/ai-provider.interface';
@@ -26,10 +27,11 @@ import { GeminiProvider } from './providers/gemini.provider';
     },
     AiAuditService,
     CodegenService,
+    DocumentationService,
     SelfHealingService,
     NlToFlowService,
     ChatService,
   ],
-  exports: [CodegenService, SelfHealingService, NlToFlowService],
+  exports: [CodegenService, DocumentationService, SelfHealingService, NlToFlowService],
 })
 export class AiModule {}

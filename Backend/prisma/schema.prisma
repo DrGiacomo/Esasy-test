@@ -30,6 +30,18 @@ enum MemberRole {
   VIEWER  // Solo lectura y visualización de reportes
 }
 
+// Cómo ve la plataforma un usuario. Son DOS y solo dos, y el rol no influye:
+// SENCILLO  — la UI visual es todo lo que se ve. Sin selectores crudos, sin código
+//             generado, sin Git, sin trazas. Nada queda inaccesible: cada paso deja
+//             desplegar su detalle técnico.
+// COMPLEJO  — todo a la vista, para quien audita o edita el código.
+// Todo el mundo empieza en SENCILLO; pasar a COMPLEJO es siempre decisión del propio
+// usuario, desde sus ajustes. Es el §2 de PROJECT_CONTEXT.md, sin construir desde mayo.
+enum UiMode {
+  SENCILLO
+  COMPLEJO
+}
+
 enum TestStatus {
   DRAFT      // Recién creado, sin pasos definidos
   ACTIVE     // Listo para ejecutarse
@@ -109,6 +121,7 @@ model User {
   displayName  String
   passwordHash String   // bcrypt hash, nunca texto plano
   isActive     Boolean  @default(true)
+  uiMode       UiMode   @default(SENCILLO) // Ver enum UiMode. Sin excepciones al defecto.
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -216,6 +229,8 @@ model Test {
   status         TestStatus @default(DRAFT)
   flowModel      Json       // Modelo del flujo (antes "semanticModel"): [{action, target, value, assertion}]
   generatedCode  String?    // TypeScript POM generado por el AI Engine
+  documentation  String?    // Explicación en lenguaje llano generada por IA (AiOperationType.DOCUMENTATION)
+  documentedAt   DateTime?  // Cuándo se generó: la documentación caduca cuando cambian los pasos
   currentVersion Int        @default(1) // Apunta a TestVersion.versionNumber activo
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

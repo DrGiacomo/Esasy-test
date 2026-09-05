@@ -29,6 +29,27 @@ function extractError(e: unknown, fallback: string): string {
   return e instanceof Error ? e.message : fallback;
 }
 
+/**
+ * Completa el usuario del store con lo que solo sabe el servidor: el nombre real y el
+ * modo de interfaz. Se llama despues de fijar el token, porque necesita mandarlo.
+ *
+ * Si falla, no rompe la sesion: se queda el perfil provisional (SENCILLO). Errar hacia
+ * SENCILLO es errar de menos, que es el lado bueno para equivocarse.
+ */
+async function hidratarPerfil(): Promise<void> {
+  try {
+    const yo = await authApi.me();
+    useAuthStore.getState().patchUser({
+      displayName: yo.displayName,
+      email: yo.email,
+      role: yo.role,
+      uiMode: yo.uiMode,
+    });
+  } catch {
+    /* perfil provisional: se queda como esta */
+  }
+}
+
 export function useAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +63,8 @@ export function useAuth() {
       const payload = parseJwt(tokens.accessToken);
       if (!payload) throw new Error('Token inválido');
       tokenStorage.setRefreshToken(tokens.refreshToken);
-      setAuth({ id: payload.sub, email: dto.email, displayName: null, orgId: payload.orgId, role: payload.role }, tokens.accessToken);
+      setAuth({ id: payload.sub, email: dto.email, displayName: null, orgId: payload.orgId, role: payload.role, uiMode: 'SENCILLO' }, tokens.accessToken);
+      await hidratarPerfil();
       void navigate(ROUTES.PROJECTS);
     } catch (e) {
       setError(extractError(e, 'Error al iniciar sesión'));
@@ -56,7 +78,8 @@ export function useAuth() {
       const payload = parseJwt(tokens.accessToken);
       if (!payload) throw new Error('Token inválido');
       tokenStorage.setRefreshToken(tokens.refreshToken);
-      setAuth({ id: payload.sub, email: dto.email, displayName: dto.displayName, orgId: payload.orgId, role: payload.role }, tokens.accessToken);
+      setAuth({ id: payload.sub, email: dto.email, displayName: dto.displayName, orgId: payload.orgId, role: payload.role, uiMode: 'SENCILLO' }, tokens.accessToken);
+      await hidratarPerfil();
       void navigate(ROUTES.PROJECTS);
     } catch (e) {
       setError(extractError(e, 'Error al registrarse'));

@@ -3,6 +3,11 @@ export interface CapturedStep {
   selector?: string;
   /** Estrategia del selector computado por el recorder: css | testId | role | text | xpath */
   selectorType?: string;
+  /**
+   * Como llama una persona al elemento: su aria-label, su texto, su placeholder...
+   * Es lo que ve el modo SENCILLO. Va aparte del selector a proposito.
+   */
+  label?: string;
   value?: string;
   url?: string;
   key?: string;

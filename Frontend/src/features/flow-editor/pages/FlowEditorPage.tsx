@@ -9,8 +9,10 @@ import { StepBlockPalette } from '../components/StepBlockPalette';
 import { StepInspector } from '../components/StepInspector';
 import { CodePreviewPanel } from '../components/CodePreviewPanel';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { useUiMode } from '@/hooks/useUiMode';
 
 export default function FlowEditorPage() {
+  const { sencillo } = useUiMode();
   const { testId } = useParams<{ testId: string }>();
   const [test, setTest] = useState<(Test & { steps: TestStep[] }) | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,7 @@ export default function FlowEditorPage() {
         />
       </div>
 
-      <CodePreviewPanel code={test.generatedCode} />
+      {!sencillo && <CodePreviewPanel code={test.generatedCode} />}
     </div>
   );
 }

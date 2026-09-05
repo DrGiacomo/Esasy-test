@@ -1,4 +1,11 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "comment": [
+    "'prisma' va excluido a proposito. El seed (prisma/seed.ts) vive fuera de src/, y si",
+    "entra en el build TypeScript sube el rootDir comun a la raiz del proyecto: la salida",
+    "pasa de dist/main.js a dist/src/main.js y 'npm run start:prod' deja de arrancar con",
+    "un MODULE_NOT_FOUND que no menciona la causa. El seed no necesita compilarse: se",
+    "ejecuta con ts-node."
+  ],
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
 }

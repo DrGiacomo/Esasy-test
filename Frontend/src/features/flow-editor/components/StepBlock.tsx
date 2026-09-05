@@ -2,6 +2,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2 } from 'lucide-react';
 import type { TestStep } from '@/types/models';
+import { describeStep } from '@/lib/describe-step';
+import { useUiMode } from '@/hooks/useUiMode';
 
 const ACTION_COLORS: Record<string, string> = {
   navigate: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -20,6 +22,7 @@ interface Props {
 }
 
 export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
+  const { sencillo } = useUiMode();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
 
   const style = {
@@ -45,9 +48,14 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
 
       <span className={`rounded px-2 py-0.5 text-xs font-medium border ${colorCls}`}>{step.action}</span>
 
-      <span className="flex-1 truncate text-sm text-gray-700 font-mono text-xs">
-        {step.selector ?? step.value ?? step.description ?? ''}
-      </span>
+      {/* En SENCILLO, la frase; en COMPLEJO, el selector como siempre. */}
+      {sencillo ? (
+        <span className="flex-1 truncate text-sm text-gray-700">{describeStep(step)}</span>
+      ) : (
+        <span className="flex-1 truncate font-mono text-xs text-gray-700">
+          {step.selector ?? step.value ?? step.description ?? ''}
+        </span>
+      )}
 
       <button
         onClick={(e) => { e.stopPropagation(); onRemove(); }}

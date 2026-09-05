@@ -1,8 +1,9 @@
 # PROJECT STRUCTURE — Fase 1 Entregable 2
 
-> **Estado:** Fase 1 — Diseño y Arquitectura  
-> **Versión del documento:** 1.0.0  
-> **Última actualización:** 2026-05-25
+> **Estado del proyecto:** vive en [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) §6 — este
+> documento no declara fase.  
+> **Versión del documento:** 1.0.0 · entregable de la Fase 1, cerrada el 2026-05-25  
+> **Última revisión:** 2026-09-04
 
 ---
 
@@ -432,3 +433,30 @@ La regla de `CLAUDE_CODE_CONTEXT.md` dice: *no importar Services de otros módul
 - **Interfaces** en `common/interfaces/` (AI Provider, Git Provider)
 - **Eventos NestJS** (`EventEmitter2`) para side-effects cross-domain (ej: execution completada → generar reporte)
 - **BullMQ jobs** para comunicación asíncrona con workers
+
+
+---
+
+## Añadido después del diseño
+
+El árbol de arriba se verificó el `2026-09-04` contra el disco: **los 11 módulos de backend
+coinciden**. Lo que sigue existe en el código y este documento no lo menciona, porque nació
+en las fases 2 y 3:
+
+| Ruta | Qué es | Llegó en |
+|---|---|---|
+| `Backend/prisma/rls/` | Políticas Row-Level Security de Postgres. El diseño las declaró como *estrategia conceptual* (§6.1 de `PROJECT_CONTEXT.md`); aquí están escritas | Fase 3 · `fa1d7fb` |
+| `Backend/src/workers/execution/auto-healing.service.ts` | Lee el contexto del fallo que deja el executor y crea propuestas de reparación en `PENDING_APPROVAL` | Fase 3 |
+| `Backend/src/workers/execution/artifact-cleanup.service.ts` | Cron diario que borra artefactos por encima de `ARTIFACTS_RETENTION_DAYS` | Fase 3 |
+| `Backend/src/modules/ai/providers/` → proveedor Gemini | IA multimodal para el self-healing con imagen, bajo `VISION_PROVIDER`. Convive con DeepSeek | Fase 3 |
+| `Backend/src/modules/ai/util/retry.ts` | Reintentos con backoff y jitter ante 429/5xx en los proveedores de IA | Fase 3 |
+| `Backend/src/common/util/duration.ts` | Parseo de duraciones (`15m`, `24h`, `7d`) compartido por los dos sitios de `auth` que leían el mismo formato de dos maneras distintas | Fase 3 · 2026-09-04 |
+| `Backend/prisma/seed.ts` | Datos de demostración: idempotente, `--borrar`, se niega ante datos reales. Excluido del build en `tsconfig.build.json` — si entra, el `rootDir` sube y `dist/main.js` se convierte en `dist/src/main.js` | Fase 4 |
+| `Backend/src/modules/ai/operations/documentation.service.ts` | Documentación de un test en lenguaje llano. Al modelo no se le pasan los selectores | Fase 4 |
+| `Backend/src/modules/reports/report-html.ts` | El informe en HTML autocontenido, con las capturas embebidas | Fase 4 |
+| `Frontend/src/lib/describe-step.ts` · `Frontend/src/hooks/useUiMode.ts` | La frase humana de un paso y el modo del usuario. **Una sola copia**: las usan las cuatro pantallas que antes pintaban el selector crudo | Fase 4 |
+| `arrancar.bat` · `parar.bat` | Arranque y parada de todo con un solo play. Comprueban antes de tocar nada y detectan el choque de puerto con un PostgreSQL nativo | Fase 5 |
+
+> **Por qué esta sección existe y no se reescribió el árbol:** el árbol describe el diseño y
+> es lo que hay que respetar al añadir código. Esta tabla dice en qué se ha desviado la
+> realidad. Mezclar las dos cosas convierte el documento en un `ls` peor hecho.

@@ -10,8 +10,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { StepList } from '../components/StepList';
 import { ROUTES } from '@/router/routes';
+import { useUiMode } from '@/hooks/useUiMode';
 
 export default function TestDetailPage() {
+  const { sencillo } = useUiMode();
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
   const [test, setTest] = useState<(Test & { steps: TestStep[]; suite?: { projectId: string } }) | null>(null);
@@ -90,7 +92,27 @@ export default function TestDetailPage() {
         />
       </div>
 
-      {test.generatedCode && (
+      {/*
+        La documentacion en lenguaje llano va ANTES que el codigo y se ve en los dos
+        modos: es el artefacto pensado para quien no programa (§3, «IA Contextual»).
+      */}
+      {test.documentation && (
+        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 text-sm font-semibold text-gray-900">Qué hace esta prueba</h2>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            {test.documentation}
+          </div>
+          {test.documentedAt && (
+            <p className="mt-3 text-xs text-gray-400">
+              Generado por IA el {new Date(test.documentedAt).toLocaleString('es-ES')}.
+              Si los pasos cambiaron después, vuelve a generarla.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* El codigo TypeScript es lo primero que el §2.1 dice no ensenar en modo sencillo. */}
+      {!sencillo && test.generatedCode && (
         <div className="mt-4 rounded-xl border border-gray-200 bg-gray-900 p-5">
           <h2 className="mb-3 text-sm font-semibold text-gray-300">Código generado (TypeScript)</h2>
           <pre className="overflow-x-auto text-xs text-gray-100">{test.generatedCode}</pre>

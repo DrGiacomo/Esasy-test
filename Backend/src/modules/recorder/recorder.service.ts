@@ -208,29 +208,47 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
     return collapsed.map((step) => this.toTestStep(step));
   }
 
+  /**
+   * Como se nombra el elemento en una descripcion para personas.
+   *
+   * Antes esto era el selector a pelo, y por eso la descripcion de un paso acababa siendo
+   * «Click en #btn-login»: un selector con una frase delante. El perfil No-Code (§2.1 de
+   * PROJECT_CONTEXT.md) no debe verlo, y `TestStep.description` existe justo para el.
+   *
+   * Recae en el selector solo cuando el recorder no pudo sacar etiqueta — es preferible
+   * una descripcion tecnica a una vacia, y el modo sencillo la ensena igual.
+   */
+  private nombrar(step: CapturedStep): string {
+    if (step.label) return `\u00ab${step.label}\u00bb`;
+    if (step.selector) return step.selector;
+    if (step.x !== undefined && step.y !== undefined) return `la posicion (${step.x}, ${step.y})`;
+    return 'el elemento';
+  }
+
   private toTestStep(step: CapturedStep): MappedStep {
     const stype = step.selectorType ?? 'css';
+    const que = this.nombrar(step);
     switch (step.type) {
       case 'navigate':
-        return { action: 'navigate', value: step.url, description: `Navegar a ${step.url}` };
+        return { action: 'navigate', value: step.url, description: `Ir a ${step.url}` };
       case 'click':
         return step.selector
-          ? { action: 'click', selector: step.selector, selectorType: stype, description: `Click en ${step.selector}` }
-          : { action: 'click', value: JSON.stringify({ x: step.x, y: step.y }), description: `Click en (${step.x}, ${step.y})` };
+          ? { action: 'click', selector: step.selector, selectorType: stype, description: `Pulsar ${que}` }
+          : { action: 'click', value: JSON.stringify({ x: step.x, y: step.y }), description: `Pulsar en ${que}` };
       case 'dblclick':
         return step.selector
-          ? { action: 'dblclick', selector: step.selector, selectorType: stype, description: `Doble click en ${step.selector}` }
-          : { action: 'dblclick', value: JSON.stringify({ x: step.x, y: step.y }), description: `Doble click en (${step.x}, ${step.y})` };
+          ? { action: 'dblclick', selector: step.selector, selectorType: stype, description: `Pulsar dos veces ${que}` }
+          : { action: 'dblclick', value: JSON.stringify({ x: step.x, y: step.y }), description: `Pulsar dos veces en ${que}` };
       case 'fill':
-        return { action: 'fill', selector: step.selector, selectorType: stype, value: step.value, description: `Escribir "${step.value}"` };
+        return { action: 'fill', selector: step.selector, selectorType: stype, value: step.value, description: `Escribir "${step.value}" en ${que}` };
       case 'type':
-        return { action: 'fill', value: step.value, description: `Teclear "${step.value}"` };
+        return { action: 'fill', value: step.value, description: `Escribir "${step.value}"` };
       case 'press':
-        return { action: 'press', value: step.key, description: `Presionar ${step.key}` };
+        return { action: 'press', value: step.key, description: `Pulsar la tecla ${step.key}` };
       case 'select':
-        return { action: 'select', selector: step.selector, selectorType: stype, value: step.value, description: `Seleccionar "${step.value}"` };
+        return { action: 'select', selector: step.selector, selectorType: stype, value: step.value, description: `Elegir "${step.value}" en ${que}` };
       case 'hover':
-        return { action: 'hover', selector: step.selector, selectorType: stype, description: `Hover en ${step.selector}` };
+        return { action: 'hover', selector: step.selector, selectorType: stype, description: `Poner el raton sobre ${que}` };
       default:
         return { action: step.type, description: step.type };
     }

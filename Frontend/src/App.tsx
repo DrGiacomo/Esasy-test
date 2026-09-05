@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { AppRouter } from '@/router';
 import { tokenStorage } from '@/lib/auth/token.storage';
 import { api } from '@/lib/api/axios.client';
+import { authApi } from '@/features/auth/auth.api';
 import { useAuthStore } from '@/store/auth.store';
 import type { MemberRole } from '@/types/models';
 
@@ -49,9 +50,24 @@ export default function App() {
               displayName: null,
               orgId: payload.orgId,
               role: payload.role,
+              // Provisional hasta que responda /auth/me. SENCILLO es el defecto correcto
+              // mientras tanto: si la peticion tarda o falla, se ve de menos un instante
+              // en lugar de ensenar selectores a quien pidio no verlos.
+              uiMode: 'SENCILLO',
             },
             accessToken,
           );
+          void authApi
+            .me()
+            .then((yo) =>
+              useAuthStore.getState().patchUser({
+                displayName: yo.displayName,
+                email: yo.email,
+                role: yo.role,
+                uiMode: yo.uiMode,
+              }),
+            )
+            .catch(() => undefined);
         }
       })
       .catch(() => {

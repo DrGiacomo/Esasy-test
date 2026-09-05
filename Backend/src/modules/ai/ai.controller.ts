@@ -7,12 +7,14 @@ import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import {
   ChatRequestDto,
   CodegenRequestDto,
+  DocumentationRequestDto,
   HealingReviewDto,
   HealStepRequestDto,
   NlToFlowRequestDto,
 } from './dto/ai-request.dto';
 import { ChatService } from './operations/chat.service';
 import { CodegenService } from './operations/codegen.service';
+import { DocumentationService } from './operations/documentation.service';
 import { NlToFlowService } from './operations/nl-to-flow.service';
 import { SelfHealingService } from './operations/self-healing.service';
 
@@ -22,6 +24,7 @@ export class AiController {
   constructor(
     private readonly chatService: ChatService,
     private readonly codegenService: CodegenService,
+    private readonly documentationService: DocumentationService,
     private readonly nlToFlowService: NlToFlowService,
     private readonly selfHealingService: SelfHealingService,
   ) {}
@@ -41,6 +44,16 @@ export class AiController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.codegenService.generate(dto.testId, user.sub, user.orgId);
+  }
+
+  /** Documentación en lenguaje llano. Es lo que el modo SENCILLO enseña de un test. */
+  @Post('documentation')
+  @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
+  documentation(
+    @Body() dto: DocumentationRequestDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.documentationService.generate(dto.testId, user.sub, user.orgId);
   }
 
   @Post('nl-to-flow')

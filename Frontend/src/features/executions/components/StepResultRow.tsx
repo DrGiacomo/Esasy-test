@@ -6,7 +6,7 @@ export function StepResultRow({ stepResult }: { stepResult: StepResult }) {
     <div className="flex items-center gap-3 rounded py-1.5 text-xs">
       <StatusBadge status={stepResult.status} />
       <span className="flex-1 text-gray-600">
-        {stepResult.step?.action ?? 'step'} — {stepResult.step?.selector ?? ''}
+        {stepResult.step?.description ?? stepResult.step?.action ?? 'paso'}
       </span>
       <span className="text-gray-400">{stepResult.durationMs}ms</span>
     </div>

@@ -16,12 +16,18 @@ import type { CapturedStep } from './recorder-session';
 
 interface ActionEvent {
   sessionId: string;
-  type: 'click' | 'dblclick' | 'fill' | 'press' | 'navigate' | 'hover' | 'select';
+  // 'type' (teclear texto suelto, sin selector) lo emite el recorder desde siempre y
+  // faltaba en esta union: hallazgo BAJO del audit 2026-07-12, cerrado el 2026-09-04.
+  type: 'click' | 'dblclick' | 'fill' | 'type' | 'press' | 'navigate' | 'hover' | 'select';
   x?: number;
   y?: number;
   selector?: string;
+  selectorType?: string;
+  /** Etiqueta legible del elemento, calculada por el recorder. Ver CapturedStep.label. */
+  label?: string;
   value?: string;
   key?: string;
+  url?: string;
 }
 
 /** Identidad del socket: o un usuario del frontend (JWT) o el contenedor recorder (token de sesión). */

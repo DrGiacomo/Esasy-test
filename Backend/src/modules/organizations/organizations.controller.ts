@@ -88,8 +88,10 @@ export class OrganizationsController {
     return this.membershipsService.updateRole(id, userId, dto, user);
   }
 
+  // Sin @Roles a propósito: salir de la organización lo puede hacer cualquier miembro
+  // consigo mismo, y quitar a otro sigue exigiendo ADMIN — lo comprueba el servicio,
+  // que es el único que sabe a quién se está quitando.
   @Delete(':id/members/:userId')
-  @Roles(MemberRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   removeMember(
     @Param('id') id: string,

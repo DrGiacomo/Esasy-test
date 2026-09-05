@@ -9,7 +9,11 @@
 
 ---
 
-## ⬜ Datos de demostración (`seed`) — añadido el `2026-08-13`
+## ✅ Datos de demostración (`seed`) — añadido el `2026-08-13`, **HECHO el `2026-09-04`**
+
+> `Backend/prisma/seed.ts` + `npm run db:seed`. Verificado en vivo: siembra, es idempotente
+> (dos pasadas dejan 1 organización, 2 usuarios, 3 pruebas, 10 pasos) y `--borrar` retira lo
+> suyo dejando intactas las 11 organizaciones que ya había. Entregable `4.4` de la Fase 4.
 
 Cruce #5 de `C:\Proyectos\Docs\TRASPLANTES_CRUZADOS.md`: **S.A.A.I → todos**. Con el flujo core
 funcionando al 95 %, lo que falta para enseñarlo no es producto: es que arranque con una

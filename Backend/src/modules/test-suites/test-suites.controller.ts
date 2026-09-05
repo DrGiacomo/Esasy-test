@@ -8,6 +8,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { RoleGuard } from '../../common/guards/role.guard';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
+import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
 import { TestSuiteResponseDto } from './dto/test-suite-response.dto';
 import { TestSuitesService } from './test-suites.service';
 
@@ -46,7 +47,7 @@ export class TestSuitesController {
   @Roles(MemberRole.EDITOR, MemberRole.ADMIN)
   update(
     @Param('id') id: string,
-    @Body() dto: CreateTestSuiteDto,
+    @Body() dto: UpdateTestSuiteDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<TestSuiteResponseDto> {
     return this.testSuitesService.update(id, dto, user);
