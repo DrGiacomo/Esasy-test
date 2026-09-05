@@ -131,16 +131,22 @@ REM     y cuesta media hora entenderlo. Se detecta aqui, no se sufre despues.
 REM ==========================================================================
 call :paso 3 "Puertos"
 
-if "%POSTGRES_PORT%"=="" set POSTGRES_PORT=5432
-netstat -ano | findstr /R /C:"LISTENING" | findstr /C:":%POSTGRES_PORT% " >nul 2>&1
-if not errorlevel 1 (
-    docker ps --format "{{.Ports}}" | findstr /C:":%POSTGRES_PORT%-" >nul 2>&1
-    if errorlevel 1 (
-        call :aviso "Algo ajeno ocupa ese puerto. Suele ser un PostgreSQL de Windows. Uso el 5433."
-        set POSTGRES_PORT=5433
-    )
-)
-call :bien "Postgres saldra por el puerto !POSTGRES_PORT!"
+REM  Los TRES puertos que esto publica pueden estar cogidos, no solo el de Postgres.
+REM  La primera version solo miraba el 5432 - porque fue el que dio guerra - y el
+REM  arranque murio con "port is already allocated" en el 8080, que lo tenia un
+REM  contenedor de otro proyecto con restart=always. El arreglo va en los tres.
+if "%POSTGRES_PORT%"=="" set "POSTGRES_PORT=5432"
+if "%BACKEND_PORT%"==""  set "BACKEND_PORT=3000"
+if "%FRONTEND_PORT%"=="" set "FRONTEND_PORT=8080"
+
+call :buscar_libre "%POSTGRES_PORT%" "la base de datos"
+set "POSTGRES_PORT=!LIBRE!"
+call :buscar_libre "%BACKEND_PORT%" "la API"
+set "BACKEND_PORT=!LIBRE!"
+call :buscar_libre "%FRONTEND_PORT%" "la pantalla"
+set "FRONTEND_PORT=!LIBRE!"
+
+call :bien "base de datos !POSTGRES_PORT!  -  API !BACKEND_PORT!  -  pantalla !FRONTEND_PORT!"
 
 REM ==========================================================================
 REM  4. Imagenes
@@ -187,7 +193,7 @@ call :paso 6 "Esperando a que la pantalla responda"
 
 set /a INTENTOS=0
 :esperar_web
-curl -s -o nul --max-time 3 http://localhost:8080 >nul 2>&1
+curl -s -o nul --max-time 3 http://localhost:!FRONTEND_PORT! >nul 2>&1
 if not errorlevel 1 goto :web_lista
 set /a INTENTOS+=3
 if !INTENTOS! GEQ 120 (
@@ -204,17 +210,17 @@ echo.
 call :estado
 echo.
 echo  %C_G%%C_B%+==============================================================+%C_NC%
-echo  %C_G%%C_B%^|   LISTO.  Abre:  http://localhost:8080                       ^|%C_NC%
+echo  %C_G%%C_B%^|   LISTO.  Abre:  http://localhost:!FRONTEND_PORT!                       ^|%C_NC%
 echo  %C_G%%C_B%+==============================================================+%C_NC%
 echo.
-echo   %C_D%La API responde en http://localhost:3000/api/v1%C_NC%
+echo   %C_D%La API responde en http://localhost:!BACKEND_PORT!/api/v1%C_NC%
 echo   %C_D%Para parar todo:  parar.bat%C_NC%
 echo.
 echo   Si es la primera vez y quieres datos de ejemplo dentro:
 echo       %C_C%docker compose exec backend npx prisma db seed%C_NC%
 echo   Deja dos cuentas: ana@demo.local y dani@demo.local, clave demo1234
 echo.
-start "" http://localhost:8080
+start "" http://localhost:!FRONTEND_PORT!
 goto :fin
 
 REM ==========================================================================
@@ -279,6 +285,26 @@ REM ==========================================================================
 REM  Subrutinas de pintado. Van aparte porque una linea con color, variable
 REM  retrasada y parentesis a la vez confunde al parser de cmd.
 REM ==========================================================================
+REM  Busca el primer puerto libre a partir de uno dado y lo deja en LIBRE.
+REM  "Ocupado por un contenedor nuestro" no cuenta: ese es el caso de volver a
+REM  arrancar algo que ya estaba arriba, y ahi hay que reutilizar el mismo puerto.
+:buscar_libre
+set "LIBRE=%~1"
+set /a VUELTAS=0
+:bl_loop
+netstat -ano | findstr /R /C:"LISTENING" | findstr /C:":!LIBRE! " >nul 2>&1
+if errorlevel 1 exit /b 0
+docker ps --filter "name=e2e_" --format "{{.Ports}}" | findstr /C:":!LIBRE!-" >nul 2>&1
+if not errorlevel 1 exit /b 0
+set /a VUELTAS+=1
+if !VUELTAS! GEQ 20 (
+    call :aviso "No encuentro puerto libre cerca del !LIBRE! para %~2. Sigo y que falle claro."
+    exit /b 0
+)
+set /a LIBRE+=1
+call :aviso "El puerto para %~2 esta cogido por otro programa. Pruebo el !LIBRE!."
+goto :bl_loop
+
 :paso
 echo.
 echo  %C_C%%C_B%[%~1/6]%C_NC% %C_B%%~2%C_NC%
@@ -289,7 +315,7 @@ echo     %C_G%[OK]%C_NC% %~1
 exit /b 0
 
 :aviso
-echo     %C_Y%[!]%C_NC% %~1
+echo     %C_Y%[*]%C_NC% %~1
 exit /b 0
 
 :mal
