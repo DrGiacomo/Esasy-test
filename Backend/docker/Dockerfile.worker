@@ -1,6 +1,10 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Prisma lo necesita para elegir su motor. Alpine no trae openssl y Prisma, en vez de
+# fallar claro, avisa en un warning y revienta despues aplicando migraciones.
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 RUN npm ci
 
@@ -11,6 +15,9 @@ RUN npx prisma generate && npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Tambien aqui: el motor de Prisma se carga en tiempo de EJECUCION, no solo al construir.
+RUN apk add --no-cache openssl
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist

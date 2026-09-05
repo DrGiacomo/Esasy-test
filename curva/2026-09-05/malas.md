@@ -157,3 +157,38 @@ donde parar a guardar.
 la fila de `LECCIONES.md §1` de **los tres trabajos largos perdidos**, y su matiz —*la
 granularidad del guardado tiene que ser menor que lo que duele perder*— aquí se traduce a
 **un entregable, un commit**: `5.2` y `5.3` son dos, y se estaban tratando como uno.
+
+---
+
+## 9. `parar.bat` mato Docker Desktop entero
+
+> **Rompe `D1`** —*validar antes de destruir*— y es de las peores: no fallo el arranque,
+> fallo la PARADA, que es justo lo que uno ejecuta cuando ya no esta mirando.
+
+**Qué pasó.** El `parar.bat` mataba «lo que estuviera escuchando en los puertos 3000 y 5173»,
+sin mirar qué era. En el modo de desarrollo eso es Node y está bien. **En el arranque
+unificado ese puerto lo publica Docker**, así que el script mató un proceso del motor y
+dejó la máquina **sin Docker**, con este resultado en la pantalla:
+
+```
+  [-] parando el proceso 25312 del puerto 3000
+  [-] Docker no respondio - puede que ya estuviera parado
+```
+
+La segunda línea es la confesión: no es que Docker no respondiera, es que **acababa de
+matarlo el propio script**, y su mensaje culpaba a otro.
+
+**Causa.** El script se escribió para el modo viejo —tres procesos de Node en tres ventanas—
+y se **heredó tal cual** al modo nuevo, donde el dueño de esos puertos ya no es el mismo. Un
+comportamiento correcto en un contexto se dio por correcto en el otro sin volver a mirar.
+
+**Lección.** *Matar por puerto es matar a un desconocido.* Un puerto no identifica a un
+proceso: identifica una plaza que ocupa cualquiera. Antes de un `taskkill` se comprueba
+**qué** hay ahí — `tasklist /FI "PID eq N"` — y si no es lo que se esperaba, no se toca y se
+dice de quién era.
+
+**Arreglado el mismo día**, con la explicación dentro del propio archivo para el que venga
+después. Y hay una segunda mitad de la lección, más incómoda: **el script ya avisaba de esto
+en un comentario** —«por puerto y no por taskkill node.exe: eso mataría cualquier otro Node
+que tengas abierto»—. Sabía que matar a ciegas era peligroso, protegió el caso que imaginó su
+autor y no el que llegó. Es `S12` en estado puro.

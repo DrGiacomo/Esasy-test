@@ -13,6 +13,11 @@
 
 generator client {
   provider = "prisma-client-js"
+  // "native" es la maquina donde se genera (Windows o el Linux de turno).
+  // El segundo hace falta para las imagenes Docker, que son Alpine: sin el, Prisma
+  // arranca, dice que no encuentra libssl y falla al aplicar las migraciones con un
+  // "Could not parse schema engine response" que no menciona la causa.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

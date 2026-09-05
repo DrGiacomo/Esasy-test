@@ -105,3 +105,47 @@ en 0 ayer). Tres avisos vivos que ya no eran verdad.
 
 Es la fila de `LECCIONES.md §1` con **ocho** repeticiones —*el documento que dice dónde
 estamos miente*—. No se ha esperado a que alguien tropiece con ella otra vez.
+
+## 10. El arranque de un solo play, y tres defectos que solo aparecieron al ejecutarlo
+
+Easy Test arranca ahora con un doble clic, **todo dentro de Docker y sin Node en la
+máquina**. Verificado ejecutando el `.bat` entero, no leyéndolo:
+
+| | |
+|---|---|
+| Los 6 pasos | En verde, y el navegador abriéndose solo |
+| Login por nginx (`:8080`) | `HTTP 200` |
+| `/projects` y `/ai/estado` por el mismo puerto | `HTTP 200` los dos |
+| Imagen de la pantalla | **74,4 MB** — en modo desarrollo eran ~500 |
+
+**Lo que lo hace bueno no es que arranque: es que los tres defectos que se cazaron no se
+veían leyendo el código.** Los tres son de la familia «no falla, empeora»:
+
+1. **Prisma sin OpenSSL en Alpine.** No dice que le falte una librería: dice
+   `Could not parse schema engine response`. *Esta es la causa real de que el arranque
+   completo por Docker no hubiera funcionado nunca en este proyecto.*
+2. **El backend sin el socket de Docker.** La plataforma sube igual y **grabar deja de
+   funcionar** — es el backend quien crea los contenedores de grabación. Nada en pantalla,
+   una línea de aviso en el log.
+3. **nginx cacheaba la IP del backend.** Recrear el backend dejaba la pantalla en `502`
+   hasta que alguien reiniciara nginx. Se probó **recreando el backend a propósito** y
+   volviendo a pedir sin tocar nada: `200`.
+
+## 11. Se probó el comando que el script promete, antes de prometerlo
+
+`arrancar.bat` termina diciendo cómo meter los datos de ejemplo:
+`docker compose exec backend npx prisma db seed`. Se ejecutó **antes** de dejarlo escrito:
+faltaba `package.json` en la imagen —Prisma lee de ahí qué ejecutar— y habría fallado con un
+mensaje que no menciona la causa.
+
+Es la lección de ayer aplicada el día siguiente: *un archivo que se nombra en la salida de un
+programa es una dependencia, no una promesa* — aquí, un **comando**.
+
+## 12. Un `.env` con secretos estuvo a punto de entrar en git, y lo paró el paso previo
+
+Al retirar el `.env` duplicado se renombró a `.env.viejo-2026-09-05`. El `.gitignore` cubría
+`.env`, `.env.local` y `.env.*.local` — **ninguno de los tres casa con ese nombre**. Apareció
+como archivo nuevo sin seguir en `git status`.
+
+Lo cazó mirar `git status` antes de preparar el commit (`C6`), no un aviso de nadie. Se añadió
+el patrón `.env.viejo*` **antes** de que ningún commit lo viera.

@@ -2,6 +2,9 @@
 .env
 .env.local
 .env.*.local
+# Copias retiradas de un .env: llevan secretos reales dentro y NO se versionan.
+# El nombre lleva fecha (.env.viejo-2026-09-05), asi que el patron va con comodin.
+.env.viejo*
 
 # Dependencies
 node_modules/

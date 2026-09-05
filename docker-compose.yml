@@ -2,8 +2,17 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: e2e_postgres
+    # El puerto del HOST es configurable A PROPOSITO. Clavarlo a 5432 rompe el arranque en
+    # cualquier maquina que ya tenga PostgreSQL instalado de forma nativa: el servicio del
+    # sistema se queda con el puerto y `localhost:5432` acaba respondiendo desde OTRA base.
+    # El sintoma es un "Authentication failed" que no tiene nada que ver con las credenciales.
+    #   Si te pasa:  POSTGRES_PORT=5433 en tu .env   (arrancar.bat lo detecta y lo hace solo)
+    #
+    # Vivia duplicado: aqui clavado y ademas en docker-compose.dev.yml como variable. Compose
+    # SUMA las dos listas, asi que publicaba 5432 y 5433 a la vez y el arranque fallaba en
+    # cuanto habia un Postgres nativo. Se declara UNA vez, aqui.
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: e2e_user
       POSTGRES_PASSWORD: e2e_pass
@@ -22,7 +31,7 @@ services:
     image: redis:7-alpine
     container_name: e2e_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -35,28 +44,51 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./Backend
       dockerfile: docker/Dockerfile
     container_name: e2e_backend
-    env_file: .env
+    # UN SOLO .env, el de Backend/. Habia dos -este y ./.env- con secretos DISTINTOS: la
+    # VAULT_ENCRYPTION_KEY de la raiz no descifraba los secretos ya guardados, asi que
+    # arrancar por Docker los dejaba ilegibles sin decir por que. El de Backend/ es el que
+    # descifra, es el que lee `npm run start` y es el que prepara `npm run setup`.
+    env_file: ./Backend/.env
+    # Y estas se ponen AQUI, no en el .env, porque valen distinto segun donde corra el
+    # proceso: `localhost` dentro de un contenedor es el propio contenedor, no la maquina.
+    # Con el .env a secas el backend buscaba la base en su propio localhost, donde no hay
+    # nada. Por eso el arranque completo por Docker no habia funcionado nunca.
+    environment:
+      DATABASE_URL: postgresql://e2e_user:e2e_pass@postgres:5432/e2e_platform
+      REDIS_URL: redis://redis:6379
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
+      # El socket de Docker, y no es opcional: el backend ARRANCA los contenedores de
+      # grabacion (recorder.service.ts crea uno por sesion). Sin esto el arranque no
+      # falla -la plataforma sube igual- y grabar deja de funcionar, que es una de las
+      # cuatro patas del producto. El sintoma es un ENOENT en el log y nada en pantalla.
+      - /var/run/docker.sock:/var/run/docker.sock
       - artifacts:/artifacts
     networks:
       - e2e-net
 
   worker:
     build:
-      context: ./backend
+      context: ./Backend
       dockerfile: docker/Dockerfile.worker
     container_name: e2e_worker
-    env_file: .env
+    env_file: ./Backend/.env
+    environment:
+      DATABASE_URL: postgresql://e2e_user:e2e_pass@postgres:5432/e2e_platform
+      REDIS_URL: redis://redis:6379
+      # Las que el worker inyecta en cada contenedor de ejecucion que arranca. Van a la
+      # misma red, asi que hablan por el nombre del servicio igual que el.
+      CONTAINER_DATABASE_URL: postgresql://e2e_user:e2e_pass@postgres:5432/e2e_platform
+      CONTAINER_REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,6 +97,20 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - artifacts:/artifacts
+    networks:
+      - e2e-net
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: docker/Dockerfile
+    container_name: e2e_frontend
+    # Esta es la unica direccion que hace falta saberse: http://localhost:8080
+    # Todo lo demas (API, artefactos, tiempo real) sale por aqui, reenviado por nginx.
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
     networks:
       - e2e-net
 

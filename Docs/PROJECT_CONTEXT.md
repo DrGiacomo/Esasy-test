@@ -266,7 +266,7 @@ comando de `crypto`. Los dos últimos requisitos ya no existen (5.2 y 5.3, `2026
 
 | # | Entregable | Estado |
 |---|---|---|
-| **5.1** | **Arranque de un solo play** | **Hecho a medias** — `arrancar.bat` y `parar.bat` levantan y paran todo, comprueban antes de tocar nada y detectan el choque de puerto con un PostgreSQL nativo. Siguen exigiendo Docker y Node ya instalados |
+| **5.1** | **Arranque de un solo play** | **HECHO (`2026-09-05`)** — `arrancar.bat` levanta la plataforma entera dentro de Docker, seis pasos en pantalla, y abre el navegador. **Ya no exige Node ni `npm install`**: solo Docker |
 | **5.2** | **Secretos que se generan solos** si faltan, en vez de exigir dos comandos de `crypto` copiados a mano | **HECHO (`2026-09-05`, commit `e8d6ebe`)** — `Backend/scripts/preparar-entorno.mjs`, `npm run setup`, y `arrancar.bat` lo invoca solo si falta el `.env` |
 | **5.3** | **La IA como opcional** — que la plataforma arranque sin `DEEPSEEK_API_KEY` y desactive las funciones de IA con un aviso, en vez de romper | **HECHO (`2026-09-05`, commit `2430d06`)** — arranca, avisa en el log, `GET /ai/estado` responde y las 5 operaciones dan `503` legible |
 | **5.4** | **Instalador** para quien no tiene nada instalado | Abierto — hay un `install-easytest.exe` de mayo sin verificar |
@@ -298,8 +298,35 @@ comando de `crypto`. Los dos últimos requisitos ya no existen (5.2 y 5.3, `2026
 interfaz de IA del frontend está escrita y **sin montar en ninguna ruta** — ver
 `PENDIENTES.md` §7. La mitad de servidor del aviso funciona; la de pantalla no existe.
 
+**Cómo se verificó 5.1** (`2026-09-05`, ejecutando el `.bat`, no leyéndolo):
+
+| Comprobación | Resultado |
+|---|---|
+| `arrancar.bat` de principio a fin | Los **6 pasos en verde** y el navegador abriéndose solo |
+| ¿Hace falta Node en la máquina? | **No.** Si falta, el `.env` se prepara dentro de un contenedor |
+| Login a través de nginx (`:8080`, no `:3000`) | `HTTP 200` |
+| `GET /api/v1/projects` y `/ai/estado` por el mismo puerto | `HTTP 200` los dos |
+| Recrear el backend y volver a pedir sin tocar nginx | `HTTP 200` — la resolución es dinámica |
+| El comando de datos de ejemplo que promete el `.bat` | Funciona dentro del contenedor y **se niega** porque la base tiene datos reales |
+| Tamaño de la imagen de la pantalla | **74,4 MB** (nginx sirviendo el compilado) |
+
+**Tres defectos que solo aparecieron al ejecutar, y ninguno era visible leyendo:**
+
+1. **Prisma no arrancaba en la imagen Alpine** — le falta OpenSSL, y en vez de decirlo falla
+   con `Could not parse schema engine response`. Arreglado con `apk add openssl` y el
+   `binaryTarget` de musl. *Este es el motivo real de que el arranque completo por Docker no
+   hubiera funcionado nunca.*
+2. **El backend no tenía el socket de Docker.** Arranca igual y **grabar deja de funcionar**,
+   porque es el backend quien crea los contenedores de grabación. Fallo silencioso puro.
+3. **nginx cacheaba la dirección del backend** al arrancar: al recrearlo, `502` hasta que
+   alguien reiniciase nginx.
+
 **Criterio de cierre de la Fase 5:** que alguien que no programa pueda pasar de un equipo sin
 nada a la pantalla de acceso **sin abrir una terminal**.
+
+> **Dónde estamos contra ese criterio:** ya no hace falta terminal ni Node — pero sigue
+> haciendo falta **instalar Docker Desktop a mano**, y eso es el entregable `5.4`. La fase no
+> se cierra hasta que eso también lo resuelva el instalador.
 
 ---
 

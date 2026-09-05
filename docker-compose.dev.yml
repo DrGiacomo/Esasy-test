@@ -1,24 +1,24 @@
-# Override para desarrollo local — levanta solo infraestructura, backend corre con npm run start:dev
+# Override para desarrollo local.
+#
+# Modo de trabajo: la infraestructura (Postgres y Redis) en Docker, y el backend, el worker
+# y la pantalla corriendo a mano con `npm run start:dev` para tener recarga en caliente.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up postgres redis -d
+#
+# Para el arranque de UN SOLO PLAY -todo dentro de Docker, sin Node en la maquina- este
+# archivo no se usa:
+#
+#   docker compose up -d          (o arrancar.bat, que hace lo mismo comprobando antes)
+#
+# Los puertos NO se declaran aqui. Vivian aqui y ademas en el compose base, y Compose SUMA
+# las dos listas: el resultado era publicar 5432 y 5433 a la vez y fallar en cualquier
+# maquina con PostgreSQL nativo. Se declaran una sola vez, en el base, con POSTGRES_PORT.
 services:
-  postgres:
-    # El puerto del HOST es configurable a proposito. Clavarlo a 5432 rompe el arranque
-    # en cualquier maquina que ya tenga PostgreSQL instalado de forma nativa: el servicio
-    # del sistema se queda con el puerto y `localhost:5432` acaba respondiendo desde OTRA
-    # base de datos. El sintoma es un "Authentication failed" que no tiene nada que ver
-    # con las credenciales, y cuesta media hora entenderlo.
-    #   Si te pasa:  POSTGRES_PORT=5433 en tu .env  (y ajusta DATABASE_URL al mismo puerto)
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-
-  redis:
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-
   backend:
     build:
       dockerfile: docker/Dockerfile.dev
     volumes:
-      - ./backend:/app
+      - ./Backend:/app
       - /app/node_modules
     command: npm run start:dev
 
@@ -26,6 +26,6 @@ services:
     build:
       dockerfile: docker/Dockerfile.dev
     volumes:
-      - ./backend:/app
+      - ./Backend:/app
       - /app/node_modules
     command: node dist/workers/bootstrap-worker.js

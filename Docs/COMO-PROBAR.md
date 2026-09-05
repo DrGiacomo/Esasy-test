@@ -14,29 +14,54 @@
 
 | Necesitas | Cómo comprobarlo |
 |---|---|
-| Docker Desktop **arrancado** | Que diga «Engine running» |
-| Node.js 20 o superior | `node --version` |
-| `Backend/.env` relleno | Copia de `.env.example` |
+| **Docker Desktop instalado** | Nada más. `arrancar.bat` lo abre él si está cerrado |
+
+Eso es todo desde el `2026-09-05`. **Node.js ya no hace falta**, ni `npm install`, ni copiar
+el `.env`: el arranque lo prepara dentro de un contenedor.
 
 > ⚠️ **Si ya tienes PostgreSQL instalado en tu máquina**, el servicio nativo se queda con el
-> puerto 5432 y `localhost:5432` responderá desde **esa** base, no desde el contenedor. El
-> error que verás es `Authentication failed` con las credenciales correctas. `arrancar.bat`
-> lo detecta y se pasa al 5433 solo; si arrancas a mano, cambia `POSTGRES_PORT` y el puerto
-> de `DATABASE_URL`.
+> puerto 5432 y `localhost:5432` respondería desde **esa** base, no desde el contenedor. El
+> error sería un `Authentication failed` con las credenciales correctas. `arrancar.bat` lo
+> detecta y se pasa al 5433 solo.
 
 ---
 
 ## Paso 0 — Arrancar
 
+Doble clic en:
+
 ```
 arrancar.bat
 ```
 
+Verás seis pasos en pantalla, en este orden:
+
+```
+ [1/6] Comprobando Docker
+    [OK] Docker respondiendo
+ [2/6] Configuracion
+    [OK] Backend\.env listo
+ [3/6] Puertos
+    [OK] Postgres saldra por el puerto 5433
+ [4/6] Imagenes de grabacion y ejecucion
+    [OK] se reutilizan las que hay
+ [5/6] Levantando la plataforma
+    [OK] contenedores arriba
+ [6/6] Esperando a que la pantalla responda
+    [OK] la pantalla responde
+```
+
 | ✅ Debe pasar | ❌ No debe pasar |
 |---|---|
-| Seis comprobaciones en verde, tres ventanas nuevas (backend, worker, frontend) y la web en `http://localhost:5173` | Que se quede a medias. Si falta Docker, Node o el `.env`, **aborta antes de tocar nada** y dice cuál falta |
+| Los seis pasos en verde y el navegador abriéndose solo en `http://localhost:8080` | Que se quede a medias. Si falta Docker, **aborta antes de tocar nada** y dice qué falta |
+| **La primera vez tarda varios minutos** construyendo las imágenes. Es normal, no cierres la ventana | Que parezca colgado sin decir nada: cada espera imprime los segundos que lleva |
 
-Para parar todo: `parar.bat`. Los contenedores se paran, **no se borran**: tu base sigue ahí.
+> **Hay un segundo modo, para programar:** `arrancar.bat /dev` deja la base y la cola en
+> Docker y arranca backend, worker y pantalla con `npm` en tres ventanas, con recarga en
+> caliente, en `http://localhost:5173`. Ese sí necesita Node.js 20.
+
+Para parar todo: `parar.bat`. Los contenedores se paran, **no se borran**: tu base, tus
+vídeos y tus trazas siguen ahí.
 
 ---
 

@@ -1,0 +1,20 @@
+Este archivo explica por que existe `.env.viejo-2026-09-05`.  (2026-09-05)
+
+Habia DOS archivos .env en el proyecto:
+
+    ./.env            <- lo leia Docker Compose
+    ./Backend/.env    <- lo lee `npm run start` y lo prepara `npm run setup`
+
+Y tenian secretos DISTINTOS. Comprobado el 2026-09-05 contra el unico secreto guardado
+en la base (TARGET_URL, del 2026-06-27):
+
+    VAULT_ENCRYPTION_KEY de ./.env          -> NO descifra
+    VAULT_ENCRYPTION_KEY de ./Backend/.env  -> descifra correctamente
+
+Es decir: arrancar por Docker dejaba ilegibles los secretos guardados arrancando por npm,
+y al reves. Sin ningun error que lo explicara.
+
+Desde hoy manda UNO SOLO: `Backend/.env`. El compose apunta ahi.
+
+Este archivo se conserva por si algun dia aparece algo cifrado con la clave vieja. Si pasan
+unas semanas y no aparece nada, se puede borrar. No se versiona (esta en .gitignore).
