@@ -154,6 +154,9 @@ Medido el 2026-09-04: 52 segundos, traza de 41,7 KB, paso fallido en **30.099 ms
 
 > ⚠️ **Si la traza no aparece**, reconstruye las imágenes:
 > `docker compose --profile build-images build executor recorder`
+>
+> Tarda varios minutos: `executor` y `recorder` pesan **2,91 GB cada una** — casi todo es
+> Playwright con sus navegadores. Ver [`CAPTURAS.md`](CAPTURAS.md).
 
 ---
 
