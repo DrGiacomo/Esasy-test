@@ -14,7 +14,14 @@ export const configSchema = Joi.object({
 
   VAULT_ENCRYPTION_KEY: Joi.string().length(64).required(), // 32 bytes hex
 
-  DEEPSEEK_API_KEY: Joi.string().required(),
+  // OPCIONAL a propósito (entregable 5.3 de la Fase 5). Sin ella, la plataforma arranca
+  // igual y todo el flujo core —grabar, convertir, ejecutar, ver informes— funciona; solo
+  // las cinco operaciones de IA responden 503 con un mensaje que explica qué falta.
+  //
+  // Antes era `required()`: quien no tuviera cuenta en DeepSeek no podía ni abrir la
+  // plataforma. Una dependencia de pago bloqueando el arranque entero es la barrera más
+  // cara que tenía este proyecto para que alguien lo probara.
+  DEEPSEEK_API_KEY: Joi.string().allow('').optional(),
   DEEPSEEK_BASE_URL: Joi.string().uri().default('https://api.deepseek.com'),
 
   // IA multimodal (visión) — opcional. Si falta, el self-healing recae en DeepSeek (texto).

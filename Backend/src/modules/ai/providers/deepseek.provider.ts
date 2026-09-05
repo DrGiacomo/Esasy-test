@@ -29,11 +29,22 @@ export class DeepSeekProvider implements AiProvider {
 
   constructor(private readonly config: ConfigService) {
     this.baseUrl = config.get<string>('DEEPSEEK_BASE_URL', 'https://api.deepseek.com');
-    this.apiKey = config.get<string>('DEEPSEEK_API_KEY')!;
+    this.apiKey = config.get<string>('DEEPSEEK_API_KEY') ?? '';
+    if (!this.apiKey) {
+      this.logger.warn(
+        'Sin DEEPSEEK_API_KEY: las funciones de IA quedan desactivadas. ' +
+          'Todo lo demás (grabar, ejecutar, informes) funciona igual.',
+      );
+    }
   }
 
   supportsImages(): boolean {
     return false;
+  }
+
+  /** ¿Se pueden usar las funciones de IA? Lo consulta el frontend para no ofrecerlas a ciegas. */
+  isConfigured(): boolean {
+    return this.apiKey.length > 0;
   }
 
   async complete(
@@ -41,6 +52,14 @@ export class DeepSeekProvider implements AiProvider {
     model = 'deepseek-chat',
     options: AiCompleteOptions = {},
   ): Promise<AiResponse> {
+    if (!this.apiKey) {
+      // Mensaje para una persona, no para un log: es lo que va a leer en la pantalla.
+      throw new ServiceUnavailableException(
+        'Las funciones de inteligencia artificial no están configuradas. ' +
+          'Añade DEEPSEEK_API_KEY a Backend/.env y reinicia el backend.',
+      );
+    }
+
     const start = Date.now();
 
     const body: Record<string, unknown> = { model, messages, temperature: 0.2 };

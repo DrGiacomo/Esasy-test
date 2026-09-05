@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { MemberRole } from '@prisma/client';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -12,6 +12,7 @@ import {
   HealStepRequestDto,
   NlToFlowRequestDto,
 } from './dto/ai-request.dto';
+import { DeepSeekProvider } from './providers/deepseek.provider';
 import { ChatService } from './operations/chat.service';
 import { CodegenService } from './operations/codegen.service';
 import { DocumentationService } from './operations/documentation.service';
@@ -23,11 +24,33 @@ import { SelfHealingService } from './operations/self-healing.service';
 export class AiController {
   constructor(
     private readonly chatService: ChatService,
+    private readonly deepseek: DeepSeekProvider,
     private readonly codegenService: CodegenService,
     private readonly documentationService: DocumentationService,
     private readonly nlToFlowService: NlToFlowService,
     private readonly selfHealingService: SelfHealingService,
   ) {}
+
+  /**
+   * Si la IA está disponible, para que una interfaz pueda no ofrecer lo que va a fallar.
+   *
+   * ⚠️ HOY NADIE LO LLAMA. La interfaz de IA (`Frontend/src/features/ai-assistant/`) está
+   * escrita pero no montada en ninguna ruta, así que no hay botón de IA que proteger.
+   * Este endpoint es la mitad del par que sí depende del servidor; la otra mitad está
+   * anotada en `Docs/PENDIENTES.md` §7. Comprobado el 2026-09-05 con
+   * `grep -rn "ai-assistant" Frontend/src`: cero usos fuera de la propia carpeta.
+   *
+   * Se deja escrito aquí porque un comentario que promete un consumidor inexistente es
+   * lo que hace creer que el trabajo está terminado.
+   */
+  @Get('estado')
+  estado(): { disponible: boolean; motivo: string | null } {
+    const disponible = this.deepseek.isConfigured();
+    return {
+      disponible,
+      motivo: disponible ? null : 'Falta DEEPSEEK_API_KEY en la configuración del servidor.',
+    };
+  }
 
   @Post('chat')
   chat(@Body() dto: ChatRequestDto, @CurrentUser() user: JwtPayload) {
