@@ -47,10 +47,17 @@ if errorlevel 1 (
   goto :fin_error
 )
 
+REM Antes esto abortaba pidiendo copiar el .env y generar dos secretos a mano con
+REM comandos de crypto sacados de la guia. Ahora se prepara solo. El script NUNCA
+REM regenera un secreto que ya exista - sobre todo VAULT_ENCRYPTION_KEY, que cifra los
+REM secretos de cada organizacion: cambiarla no los invalida, los deja ilegibles.
 if not exist "Backend\.env" (
-  echo  [X] Falta Backend\.env
-  echo      Copia .env.example a Backend\.env y rellena los valores.
-  goto :fin_error
+  echo  [!] No hay Backend\.env. Preparandolo...
+  pushd Backend & call node scripts\preparar-entorno.mjs & popd
+  if not exist "Backend\.env" (
+    echo  [X] No se pudo crear Backend\.env
+    goto :fin_error
+  )
 )
 
 if not exist "Backend\node_modules" (
