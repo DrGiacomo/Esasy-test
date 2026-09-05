@@ -1,8 +1,8 @@
 # PROJECT CONTEXT — Plataforma Web de Automatización E2E con IA
 
 > **Estado:** Fase 5 — Instalación *(Fases 1-4 cerradas)*  
-> **Versión del documento:** 2.1.0  
-> **Última actualización:** 2026-09-04
+> **Versión del documento:** 2.2.0  
+> **Última actualización:** 2026-09-05
 >
 > ⚠️ **Este documento es la ÚNICA fuente del estado de fases del proyecto** (§6).
 > `PROJECT_STRUCTURE.md`, `NETWORK_PLAN.md` y `CLAUDE_CODE_CONTEXT.md` apuntan aquí y no
@@ -260,16 +260,43 @@ tiene deuda de hallazgos.
 La Fase 4 dejó un producto que **se usa** sin programar. No dejó uno que **se instale** sin
 programar, y eso es lo que separa «se lo enseño a alguien» de «alguien se lo lleva».
 
-Hoy, para arrancar Easy Test hacen falta: Node.js, Docker Desktop, Git, el CLI de NestJS, una
-clave de API de DeepSeek, y generar dos secretos a mano con un comando de `crypto`. Nada de
-eso lo hace una persona que no programa.
+Cuando se abrió la fase, para arrancar Easy Test hacían falta: Node.js, Docker Desktop, Git,
+el CLI de NestJS, **una clave de API de DeepSeek**, y **generar dos secretos a mano** con un
+comando de `crypto`. Los dos últimos requisitos ya no existen (5.2 y 5.3, `2026-09-05`).
 
 | # | Entregable | Estado |
 |---|---|---|
 | **5.1** | **Arranque de un solo play** | **Hecho a medias** — `arrancar.bat` y `parar.bat` levantan y paran todo, comprueban antes de tocar nada y detectan el choque de puerto con un PostgreSQL nativo. Siguen exigiendo Docker y Node ya instalados |
-| **5.2** | **Secretos que se generan solos** si faltan, en vez de exigir dos comandos de `crypto` copiados a mano | Abierto |
-| **5.3** | **La IA como opcional** — que la plataforma arranque sin `DEEPSEEK_API_KEY` y desactive las funciones de IA con un aviso, en vez de romper | Abierto |
+| **5.2** | **Secretos que se generan solos** si faltan, en vez de exigir dos comandos de `crypto` copiados a mano | **HECHO (`2026-09-05`, commit `e8d6ebe`)** — `Backend/scripts/preparar-entorno.mjs`, `npm run setup`, y `arrancar.bat` lo invoca solo si falta el `.env` |
+| **5.3** | **La IA como opcional** — que la plataforma arranque sin `DEEPSEEK_API_KEY` y desactive las funciones de IA con un aviso, en vez de romper | **HECHO (`2026-09-05`, commit `2430d06`)** — arranca, avisa en el log, `GET /ai/estado` responde y las 5 operaciones dan `503` legible |
 | **5.4** | **Instalador** para quien no tiene nada instalado | Abierto — hay un `install-easytest.exe` de mayo sin verificar |
+
+**Cómo se verificaron 5.2 y 5.3** (`2026-09-05`, ejecutando, no leyendo código):
+
+*5.2 — tres casos sobre una copia aislada del árbol, nunca sobre el `.env` real:*
+
+| Caso | Resultado |
+|---|---|
+| No hay `.env` | Lo crea desde `.env.example` y genera los 2 secretos (`64` hex cada uno) |
+| Segunda pasada seguida | `diff` del `.env`: **byte a byte idéntico** — no regenera nada |
+| `.env` a medias (`JWT` puesto, `VAULT` en `CHANGE_ME`) | Rellena solo el que faltaba; **el que ya estaba no se toca** |
+
+> El segundo y el tercero son los que importan: `VAULT_ENCRYPTION_KEY` cifra los secretos de
+> cada organización y regenerarla no los invalida — **los deja ilegibles para siempre, sin
+> ningún error**. Un script de conveniencia que puede destruir datos no es una conveniencia.
+
+*5.3 — backend arrancado con `DEEPSEEK_API_KEY` vacía, contra Postgres real:*
+
+| Comprobación | Resultado |
+|---|---|
+| ¿Arranca? | Sí — `Nest application successfully started` |
+| ¿Avisa? | `WARN [DeepSeekProvider] Sin DEEPSEEK_API_KEY: las funciones de IA quedan desactivadas` |
+| `GET /ai/estado` | `{"disponible":false,"motivo":"Falta DEEPSEEK_API_KEY…"}` |
+| Las 5 operaciones (`chat`, `codegen`, `documentation`, `nl-to-flow`, `heal`) | **`503` las cinco**, con mensaje para una persona |
+
+**Lo que NO cierra esto, y se dice:** `GET /ai/estado` **no tiene quien lo llame**. La
+interfaz de IA del frontend está escrita y **sin montar en ninguna ruta** — ver
+`PENDIENTES.md` §7. La mitad de servidor del aviso funciona; la de pantalla no existe.
 
 **Criterio de cierre de la Fase 5:** que alguien que no programa pueda pasar de un equipo sin
 nada a la pantalla de acceso **sin abrir una terminal**.

@@ -112,12 +112,40 @@ al terminar · se niega si la base ya tiene datos reales.
 > (`npx prisma migrate deploy`) y reconstruir la imagen del **executor** (nuevo manejo de `assert`).
 
 ### Deuda operativa / despliegue
-1. ⚠️ **Reconstruir imágenes** del **executor** y **recorder** (`docker compose --profile build-images build`):
-   aplican captura de fallos, screenshot final siempre, selectores robustos y env por proyecto.
-2. ⚠️ **Aplicar la migración** `20260629015443_medium_low_roadmap` en cada entorno (`npx prisma migrate deploy`)
-   — incluye el `RENAME COLUMN semanticModel → flowModel` (preserva datos) y las columnas por proyecto.
-3. **Lint no es gate de CI** — hay ~444 errores `prettier/prettier` pre-existentes (CRLF vs LF) en todo el repo.
-   Para activarlo haría falta un reformat global (`prettier --write` + `.gitattributes` con `* text=auto eol=lf`).
+1. ✅ **Reconstruir imágenes** del executor y recorder — **HECHO el `2026-09-05`**. Verificado con
+   una ejecución real: traza de `41,7 KB` en disco y `traceUrl` ya no es `null`.
+2. ✅ **Migraciones aplicadas** — **HECHO el `2026-09-04`** (`npx prisma migrate deploy`); las dos
+   que llevaban sin aplicar desde julio.
+3. ✅ **El lint es gate de CI** — **HECHO el `2026-09-05`**. Eran **530** problemas, no ~444, y **80
+   no eran de formato**: la causa se cerró declarando el fin de línea del proyecto
+   (`.gitattributes`), no reformateando. `npm run lint:ci` sale con código 0 en los dos lados.
+
+## 7. La interfaz de IA está construida y sin montar — hallazgo del `2026-09-05`
+
+| # | Pendiente | Prioridad | Estado | Notas |
+|---|---|---|---|---|
+| 7.1 | **Montar `features/ai-assistant/` en la aplicación** — 4 componentes escritos que ninguna ruta importa | 🟠 | ABIERTO | `AiChatPanel`, `NlToFlowInput`, `AiChatMessage`, `HealingProposalCard` |
+| 7.2 | **Consumir `GET /ai/estado`** para no ofrecer botones de IA cuando no hay clave | 🟡 | ABIERTO | El endpoint existe y funciona desde el `2026-09-05` (entregable 5.3). Depende de 7.1: hoy no hay botón que ocultar |
+
+**Cómo se encontró, y por qué nadie lo había visto:** al escribir el aviso de IA del entregable
+5.3 se dio por hecho que el frontend ofrecía funciones de IA. Se comprobó:
+
+```
+grep -rn "ai-assistant" Frontend/src   →  0 usos fuera de la propia carpeta
+grep -rn "api.post.*ai/" Frontend/src  →  4 llamadas, todas DENTRO de esa carpeta
+```
+
+**El denominador, que es lo que duele:** de las **5 operaciones de IA** que expone el backend
+—`chat`, `codegen`, `documentation`, `nl-to-flow`, `heal`—, las que se pueden usar desde la
+pantalla son **0**. Lo único que la aplicación enseña de IA es el texto de `test.documentation`
+**si el backend ya lo generó** por su cuenta (`TestDetailPage.tsx:116`).
+
+**Por qué es 🟠 y no 🔴:** no rompe nada de lo que hoy funciona —el flujo core no pasa por
+aquí—, pero **el §3 de `PROJECT_CONTEXT.md` promete «IA Contextual» como capacidad del
+sistema**, y el perfil No-Code del §2.1 se apoya en ella. Es capacidad declarada sin puerta
+de entrada.
+
+---
 
 ### Mejoras futuras (no bloqueantes, fuera del roadmap original)
 - Self-healing con video (no solo screenshot) — fase 2 de la visión multimodal.

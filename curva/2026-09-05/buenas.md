@@ -65,3 +65,43 @@ De 5 archivos huérfanos a 2, y los 2 que quedan son configuración, no document
 
 `lint:ci` sin `--fix` y con `--max-warnings=0` en los dos lados, ejecutado: **código de
 salida 0**. Un gate que no se ha visto pasar ni fallar no es un gate, es una intención.
+
+## 7. Los dos entregables que dejó a medias el apagón, cerrados y ejecutados
+
+El corte de luz dejó `5.2` (secretos que se generan solos) y `5.3` (la IA como opcional)
+escritos y **sin commit, sin compilar y sin ejecutar**. Hoy se verificaron **ejecutando**:
+
+| | |
+|---|---|
+| Backend sin `DEEPSEEK_API_KEY` | Arranca: `Nest application successfully started` |
+| Aviso en el log | `WARN [DeepSeekProvider] Sin DEEPSEEK_API_KEY: las funciones de IA quedan desactivadas` |
+| `GET /ai/estado` | `{"disponible":false,"motivo":"Falta DEEPSEEK_API_KEY…"}` |
+| Las **5** operaciones de IA | `503` las cinco, con mensaje para una persona |
+
+**Por qué cuenta:** ayer se aprendió que *un `npm run build` que pasa no dice que el proyecto
+arranque* (`I5`). Hoy no se dio por bueno nada por compilar: se levantó Postgres, se hizo
+login con el usuario del seed y se llamó a las cinco operaciones **una por una**.
+
+## 8. El script de secretos se probó donde no podía hacer daño
+
+`preparar-entorno.mjs` puede regenerar `VAULT_ENCRYPTION_KEY`, y esa clave cifra los secretos
+de cada organización: **regenerarla no los invalida, los deja ilegibles para siempre y sin
+ningún error**. Probarlo sobre el `.env` real era la forma barata de destruir datos del
+proyecto de otra persona (`D4`).
+
+Se copió el árbol mínimo al *scratchpad* y se probaron **tres casos**, incluido el peligroso:
+
+| Caso | Resultado |
+|---|---|
+| Sin `.env` | Lo crea y genera los 2 secretos (64 hex cada uno) |
+| Segunda pasada | `diff`: **byte a byte idéntico** |
+| `.env` a medias | Rellena el que falta, **no toca el que ya estaba** |
+
+## 9. La deuda operativa caducada del `PENDIENTES` se corrigió al pasar por delante
+
+El final del documento seguía pidiendo **reconstruir las imágenes** (hecho ayer), **aplicar
+migraciones** (hechas el 09-04) y avisando de **«~444 errores de lint»** (eran 530 y quedaron
+en 0 ayer). Tres avisos vivos que ya no eran verdad.
+
+Es la fila de `LECCIONES.md §1` con **ocho** repeticiones —*el documento que dice dónde
+estamos miente*—. No se ha esperado a que alguien tropiece con ella otra vez.
