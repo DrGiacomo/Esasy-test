@@ -20,7 +20,7 @@
     ├── schema.prisma           # YA EXISTE — no modificar
     └── migrations/
         └── rls/
-            └── 001_rls_policies.sql  # Políticas RLS manuales post-prisma migrate
+            └── 001_rls_policies.sql  # Políticas RLS — ESCRITAS Y SIN APLICAR (nadie las ejecuta)
 ```
 
 ---
@@ -445,7 +445,7 @@ en las fases 2 y 3:
 
 | Ruta | Qué es | Llegó en |
 |---|---|---|
-| `Backend/prisma/rls/` | Políticas Row-Level Security de Postgres. El diseño las declaró como *estrategia conceptual* (§6.1 de `PROJECT_CONTEXT.md`); aquí están escritas | Fase 3 · `fa1d7fb` |
+| `Backend/prisma/rls/` | Políticas Row-Level Security de Postgres. **Escritas y NO aplicadas**: están fuera de `prisma/migrations/`, así que `prisma migrate deploy` no las ve y ningún script las ejecuta. Comprobado el `2026-09-05` contra la base: 0 políticas activas | Fase 3 · `fa1d7fb` |
 | `Backend/src/workers/execution/auto-healing.service.ts` | Lee el contexto del fallo que deja el executor y crea propuestas de reparación en `PENDING_APPROVAL` | Fase 3 |
 | `Backend/src/workers/execution/artifact-cleanup.service.ts` | Cron diario que borra artefactos por encima de `ARTIFACTS_RETENTION_DAYS` | Fase 3 |
 | `Backend/src/modules/ai/providers/` → proveedor Gemini | IA multimodal para el self-healing con imagen, bajo `VISION_PROVIDER`. Convive con DeepSeek | Fase 3 |

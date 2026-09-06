@@ -307,6 +307,12 @@ model TestVersion {
 model Execution {
   id                String          @id @default(uuid())
   projectId         String
+  // QUE se pidió ejecutar. Viajaba solo en el job de la cola y se perdía al terminar, así
+  // que no había forma de responder «¿cuántas veces se ha ejecutado esta suite?» sin
+  // reconstruirlo desde los resultados. Nulables porque una ejecución puede ser de todo el
+  // proyecto (los dos nulos), de una suite (suiteId) o de un test suelto (testId).
+  suiteId           String?
+  testId            String?
   triggeredBy       String          // userId que disparó la ejecución
   status            ExecutionStatus @default(QUEUED)
   dockerContainerId String?         // Asignado al iniciar PROVISIONING

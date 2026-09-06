@@ -310,6 +310,9 @@ async function runTest(browser, db, redis, row) {
         new Promise(r => setTimeout(r, 15000)),
       ]);
       console.log(`[executor][tiempo] guardar video: ${Date.now() - tVideo} ms`);
+      // Playwright escribe el video con un nombre de hash y `saveAs` hace una COPIA con el
+      // nombre del test. Sin esto quedaban los dos, ocupando lo mismo, y solo se usa uno.
+      await video.delete().catch(() => null);
     }
   }
 

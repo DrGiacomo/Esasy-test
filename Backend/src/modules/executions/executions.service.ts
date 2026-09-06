@@ -1,19 +1,49 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ExecutionStatus } from '@prisma/client';
 import { Queue } from 'bullmq';
+import { createClient } from 'redis';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ExecutionResponseDto } from './dto/execution-response.dto';
 import { TriggerExecutionDto } from './dto/trigger-execution.dto';
 import { EXECUTION_QUEUE, ExecutionJobData } from './queues/execution.queue';
 
+/** Canal por el que se avisa de una cancelacion. Uno solo para todas. */
+export const CANAL_CANCELACION = 'execution:cancel';
+
 @Injectable()
-export class ExecutionsService {
+export class ExecutionsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(ExecutionsService.name);
+  private publisher: ReturnType<typeof createClient> | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(EXECUTION_QUEUE) private readonly queue: Queue,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    try {
+      this.publisher = createClient({ url: process.env.REDIS_URL });
+      await this.publisher.connect();
+    } catch (err) {
+      // Sin publicador, cancelar sigue funcionando: el worker lo vera en su sondeo. Es mas
+      // lento, no incorrecto. Un aviso que no llega no puede tumbar la cancelacion.
+      this.logger.warn(`Sin canal de cancelacion en vivo: ${String(err)}`);
+      this.publisher = null;
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.publisher?.disconnect().catch(() => undefined);
+  }
 
   async trigger(dto: TriggerExecutionDto, user: JwtPayload): Promise<ExecutionResponseDto> {
     const project = await this.prisma.project.findFirst({
@@ -24,6 +54,10 @@ export class ExecutionsService {
     const execution = await this.prisma.execution.create({
       data: {
         projectId: dto.projectId,
+        // Qué se pidió ejecutar. Hasta hoy solo viajaba en el job de la cola y se perdía al
+        // terminar: la ejecución no recordaba si fue de una suite, de un test o del proyecto.
+        suiteId: dto.suiteId ?? null,
+        testId: dto.testId ?? null,
         triggeredBy: user.sub,
         status: ExecutionStatus.QUEUED,
       },
@@ -109,6 +143,12 @@ export class ExecutionsService {
       });
       // 2) Quitar el job de la cola si aún no se ejecuta (si está activo, el worker ya lo verá).
       await this.queue.remove(id).catch(() => undefined);
+      // 3) Avisar al worker AHORA, sin esperar a su sondeo. Es un atajo, no la garantia:
+      //    Redis pub/sub no persiste, asi que si el worker esta reconectando el mensaje se
+      //    pierde. Por eso el sondeo sigue existiendo — mas lento, pero no se pierde nada.
+      await this.publisher
+        ?.publish(CANAL_CANCELACION, id)
+        .catch((err) => this.logger.warn(`No se pudo avisar de la cancelacion: ${String(err)}`));
     } else if (deletable.includes(execution.status)) {
       await this.prisma.execution.delete({ where: { id } });
       await this.queue.remove(id).catch(() => undefined);

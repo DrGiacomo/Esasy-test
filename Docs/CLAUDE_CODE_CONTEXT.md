@@ -42,7 +42,7 @@ Orientada a producción, modular, extensible. Combina grabación visual, generac
 7. **Concurrencia local:** 5–20 ejecuciones simultáneas. Diseñar BullMQ concurrency en consecuencia.
 8. **AI Provider:** DeepSeek fijo. El wrapper debe ser provider-agnostic internamente para facilitar migración futura.
 9. **Despliegue:** Docker Compose local durante desarrollo. Migración a servidor después.
-10. **RLS:** Estrategia app-layer: `SET LOCAL app.current_org_id = '<uuid>'` antes de cada query. Políticas SQL aplicadas como migraciones manuales post-`prisma migrate`.
+10. **RLS:** ⚠️ **NO está en funcionamiento.** El interceptor lanza `SET LOCAL app.current_org_id` sin esperar la promesa y fuera de transacción —donde `SET LOCAL` no hace nada—, y las políticas SQL **nunca se han aplicado**. El aislamiento real es el filtro por `organizationId` de cada consulta. No confíes en que la base te proteja: hoy no lo hace.
 
 ---
 
@@ -50,7 +50,8 @@ Orientada a producción, modular, extensible. Combina grabación visual, generac
 
 > ⚠️ **Manda `Backend/prisma/schema.prisma` en disco, no la lista de abajo.** Hay 4
 > migraciones aplicadas desde que se escribió este documento (la última,
-> `20260712170000_refresh_token_org`), más las políticas RLS de `Backend/prisma/rls/`.
+> `20260712170000_refresh_token_org`). Las políticas RLS de `Backend/prisma/rls/` **NO se
+> aplican**: nadie las ejecuta.
 > La lista sirve para entender el dominio; para saber qué columnas hay, se abre el schema.
 
 El archivo `prisma/schema.prisma` ya existe y está completo. **No regenerar ni modificar el schema a menos que se pida explícitamente.**
@@ -117,7 +118,7 @@ SecretType:       ENV_VAR | GIT_TOKEN | WEBHOOK_SECRET
 |---|---|
 | Desacoplamiento | Módulos independientes por dominio. Comunicación via interfaces, no implementaciones. |
 | Escalabilidad | Cada ejecución en su propio contenedor Docker efímero. |
-| Seguridad | RLS en PostgreSQL. Vault para secrets. JWT con rotación. Nunca secretos en logs. |
+| Seguridad | Aislamiento por organización en la aplicación (**la RLS está escrita y sin aplicar**). Vault para secretos. JWT con rotación. Nunca secretos en logs. |
 | Extensibilidad | AI Engine con wrapper provider-agnostic. Git service intercambiable. |
 | Mantenibilidad | TypeScript estricto en frontend y backend. Sin `any`. |
 | Low-Code First | La UI visual es la capa primaria. El código es opt-in. |

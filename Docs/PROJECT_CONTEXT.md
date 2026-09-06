@@ -67,7 +67,9 @@ Plataforma web fullstack de automatización de pruebas End-to-End (E2E) inspirad
 ### 4.3 Base de Datos
 - **Motor:** PostgreSQL
 - **ORM:** Prisma
-- **Estrategia de seguridad:** Row-Level Security (RLS) para multi-tenancy
+- **Estrategia de seguridad:** aislamiento por `organizationId` en la capa de aplicación.
+  Row-Level Security (RLS) de PostgreSQL **está diseñada y escrita, pero NO aplicada** — ver
+  el aviso del §6.1
 
 ### 4.4 Cola y Workers
 - **Queue:** BullMQ
@@ -150,7 +152,8 @@ Entregables:
 - Soporte Multi-tenancy (modelo `Organization`)
 - Tablas de Auditoría de IA
 - Versionamiento Semántico de Tests
-- Estrategia conceptual de Row-Level Security (RLS) en PostgreSQL
+- Estrategia conceptual de Row-Level Security (RLS) en PostgreSQL — **conceptual es la palabra
+  exacta: sigue sin aplicarse** (`2026-09-05`)
 
 #### 6.2 Estructura de Proyecto
 - Arquitectura de carpetas detallada: Frontend (React) y Backend (NestJS) → `PROJECT_STRUCTURE.md`
@@ -203,7 +206,7 @@ Entregables:
 | **Roadmap completo** | Secretos al executor, CI/CD, selectores robustos, self-healing automático, proveedor Gemini multimodal, git sync real, limpieza de artefactos, config por proyecto | 2026-06-27 → 2026-06-28 |
 | **Pruebas** | Tests unitarios de backend, worker, recorder y frontend; tanda de pruebas en vivo documentada en `Docs/test/` | 2026-06-27 → 2026-06-28 |
 | **Auditoría 2** | 24 hallazgos: **17 cerrados el mismo día** (5 críticos, 5 altos, 7 medios) | `audit-2026-07-12.md` · 2026-07-12 |
-| **Aislamiento en la base** | Políticas RLS de Postgres (`Backend/prisma/rls/`) | `fa1d7fb` · 2026-08-17 |
+| **Aislamiento en la base** | ⚠️ **NO APLICADO.** El SQL está escrito en `Backend/prisma/rls/` y **nadie lo ejecuta**: vive fuera de `prisma/migrations/`. Comprobado el `2026-09-05`: **0 políticas** en la base. Lo que aísla hoy es la capa de aplicación | ~~`fa1d7fb` · 2026-08-17~~ |
 
 **Lo que quedó vivo al cerrar la fase** — no bloquea, pero está abierto y se dice:
 
@@ -348,7 +351,7 @@ nada a la pantalla de acceso **sin abrir una terminal**.
 |---|---|
 | **Desacoplamiento** | Arquitectura orientada a eventos y microservicios/servicios independientes |
 | **Escalabilidad** | Ejecución concurrente aislada por contenedor Docker |
-| **Seguridad** | RLS en PostgreSQL, Vault para secrets, multi-tenancy por organización |
+| **Seguridad** | Multi-tenancy por organización **en la capa de aplicación** (la RLS de PostgreSQL está escrita y sin aplicar), Vault para secretos |
 | **Extensibilidad** | Módulos independientes por dominio (Git, Reports, AI, Execution) |
 | **Mantenibilidad** | Código TypeScript tipado en frontend y backend |
 | **Low-Code First** | La interfaz visual es la capa primaria; el código es capa secundaria opcional |

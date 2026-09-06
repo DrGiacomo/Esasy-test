@@ -16,7 +16,13 @@ type RedisClient = ReturnType<typeof createClient>;
 
 type WaitOutcome = { exitCode: number | null; aborted: 'cancelled' | 'timeout' | null };
 
-const CANCEL_POLL_MS = 3000;
+// El sondeo pasa de 3 s a 15 s: ahora la via rapida es el aviso por Redis y esto es la red
+// de seguridad. Redis pub/sub NO persiste — si el worker esta reconectando cuando llega el
+// aviso, se pierde — asi que el sondeo no se quita, solo se espacia.
+const CANCEL_POLL_MS = 15000;
+
+/** Canal por el que el backend avisa de una cancelacion. Debe coincidir con el del servicio. */
+const CANAL_CANCELACION = 'execution:cancel';
 
 // Nombres de env que el runtime del executor reserva — un secreto nunca puede pisarlos.
 const RESERVED_ENV = new Set([
@@ -232,6 +238,29 @@ export class ExecutionProcessor extends WorkerHost {
       );
     });
 
+    // Aviso instantaneo por Redis. Se suscribe con su PROPIA conexion: en node-redis un
+    // cliente suscrito no puede hacer otra cosa, y compartir el del job lo dejaria mudo.
+    let avisoCancelacion: RedisClient | null = null;
+    const avisoP = new Promise<WaitOutcome>((resolve) => {
+      // Sin REDIS_URL no hay atajo y no se abre nada. Ademas de ser lo correcto, evita que
+      // los tests -que no tienen Redis- dejen una conexion colgada impidiendo que jest
+      // termine. La cancelacion sigue funcionando por el sondeo.
+      if (!process.env.REDIS_URL) return;
+      const cliente = createClient({ url: process.env.REDIS_URL });
+      avisoCancelacion = cliente;
+      cliente
+        .connect()
+        .then(() =>
+          cliente.subscribe(CANAL_CANCELACION, (mensaje: string) => {
+            if (mensaje === executionId) resolve({ exitCode: null, aborted: 'cancelled' });
+          }),
+        )
+        .catch((err) => {
+          // Sin aviso en vivo se cancela igual, por el sondeo. Se registra y se sigue.
+          this.logger.warn(`Sin aviso de cancelacion para ${executionId}: ${String(err)}`);
+        });
+    });
+
     const cancelP = new Promise<WaitOutcome>((resolve) => {
       const poll = async () => {
         if (!active) return;
@@ -249,10 +278,13 @@ export class ExecutionProcessor extends WorkerHost {
     });
 
     try {
-      return await Promise.race([exitP, timeoutP, cancelP]);
+      return await Promise.race([exitP, timeoutP, cancelP, avisoP]);
     } finally {
       active = false;
       timers.forEach(clearTimeout);
+      // La conexion del aviso es de este job: se cierra con el o se acumulan una por
+      // ejecucion hasta agotar las conexiones de Redis.
+      await (avisoCancelacion as RedisClient | null)?.disconnect().catch(() => undefined);
     }
   }
 

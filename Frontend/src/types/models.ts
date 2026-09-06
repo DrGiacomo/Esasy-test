@@ -128,7 +128,9 @@ export interface ExecutionResult {
 export interface Execution {
   id: string;
   projectId: string;
+  /** Qué se pidió ejecutar: una suite, un test suelto, o los dos nulos = el proyecto entero. */
   suiteId: string | null;
+  testId: string | null;
   status: ExecutionStatus;
   triggeredBy: string;
   dockerContainerId: string | null;

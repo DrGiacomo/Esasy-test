@@ -176,6 +176,50 @@ Se anotan las dos por separado para que no se dé por resuelto el problema al ha
 
 ---
 
+## 9. La RLS: qué costaría de verdad — hallazgo del `2026-09-05`
+
+**Estado.** El SQL de las políticas está escrito (`Backend/prisma/rls/001_rls_policies.sql`) y
+**nunca se ha aplicado**: vive fuera de `prisma/migrations/`. El interceptor que fijaba el
+contexto **se retiró el `2026-09-05`** porque no funcionaba en ninguno de sus tres pasos y
+simulaba una defensa inexistente (`M12`). Lo que aísla hoy —y está auditado— es el filtro por
+`organizationId` de la capa de aplicación.
+
+| # | Pendiente | Prioridad | Estado |
+|---|---|---|---|
+| 9.1 | **Contexto de organización por petición**, para que la base pueda filtrar | 🟠 | ABIERTO |
+| 9.2 | **Aplicar las políticas** como migración, después de 9.1 y nunca antes | 🟠 | ABIERTO |
+
+### Por qué no es un parche, y esto es lo que hay que saber antes de decidir
+
+Para que PostgreSQL pueda filtrar, **cada consulta tiene que correr en una transacción que
+lleve el `organizationId` fijado en esa misma conexión**. Hoy hay **25 servicios** que hablan
+con Prisma directamente. Las dos formas de conseguirlo:
+
+| Vía | Qué implica | Riesgo |
+|---|---|---|
+| Transacción por petición + `AsyncLocalStorage`, con `PrismaService` devolviendo la transacción activa | No hay que tocar los 25 servicios: se resuelve con un proxy en `PrismaService` | **Alto.** Toda petición pasa a ser una transacción larga: más conexiones ocupadas, riesgo de bloqueos y de agotar el pool |
+| `set_config` explícito en cada consulta | Sin transacciones largas | Hay que tocar los 25 servicios, y **el que se olvide de uno crea el agujero que esto venía a tapar** |
+
+### ⚠️ El orden no es negociable
+
+**Primero 9.1, después 9.2.** Con las políticas aplicadas y el contexto sin fijar, PostgreSQL
+no devuelve **ni una fila**: la plataforma deja de funcionar entera, no «un poco».
+
+Y ojo con el atajo: quitar el `LOCAL` para que el valor «se quede» convierte una defensa inerte
+en una **fuga activa**, porque la conexión vuelve al pool con el `organizationId` del usuario
+anterior y la hereda el siguiente.
+
+### Qué se gana
+
+**Defensa en profundidad**, no una corrección: si un día una consulta se olvida del filtro, la
+base la para. Es valioso, y **no es urgente** mientras el filtro de aplicación esté auditado —
+lo estuvo el `2026-09-05` y salió correcto, incluidos los endpoints que aceptan un id por la URL.
+
+**Lo urgente ya está hecho:** los documentos ya no afirman que exista, y el interceptor que lo
+fingía está fuera del código.
+
+---
+
 ### Mejoras futuras (no bloqueantes, fuera del roadmap original)
 - Self-healing con video (no solo screenshot) — fase 2 de la visión multimodal.
 - Documentación automática de tests (`documentation.service`) y métricas de coste IA.

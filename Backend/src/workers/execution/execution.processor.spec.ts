@@ -194,7 +194,11 @@ describe('ExecutionProcessor — ciclo de vida y cancelación del contenedor', (
     prisma.execution.findUnique.mockResolvedValue({ status: ExecutionStatus.CANCELLED });
 
     const p = processor.waitForContainerOrAbort('c1', 'exec-1');
-    await jest.advanceTimersByTimeAsync(3000); // primer poll de cancelación
+    // 15 s = CANCEL_POLL_MS. El sondeo paso de 3 s a 15 s cuando se anadio el aviso
+    // instantaneo por Redis: el sondeo dejo de ser la via principal y paso a ser la red de
+    // seguridad para cuando el aviso no llega (pub/sub no persiste). Lo que este test
+    // comprueba sigue siendo lo importante: que SIN aviso, la cancelacion se detecta igual.
+    await jest.advanceTimersByTimeAsync(15000);
 
     await expect(p).resolves.toEqual({ exitCode: null, aborted: 'cancelled' });
   });
