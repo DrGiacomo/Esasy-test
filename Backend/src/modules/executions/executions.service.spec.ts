@@ -23,7 +23,8 @@ function buildMocks() {
     add: jest.fn().mockResolvedValue(undefined),
     remove: jest.fn().mockResolvedValue(undefined),
   };
-  const service = new ExecutionsService(prisma as never, queue as never);
+  const jwt = { sign: jest.fn(() => 'pase-firmado') };
+  const service = new ExecutionsService(prisma as never, jwt as never, queue as never);
   return { prisma, queue, service };
 }
 

@@ -242,3 +242,45 @@ POST a /auth/login, la ruta rota de antes    -> 405 (el error reproducido)
 frase «Funcionando». `E8` avisa de esto —*el entusiasmo se comunica igual de rápido que un
 resultado y se corrige mucho más despacio*—. El fallo no fue el `""`: fue **firmar un
 resultado con un examen que no examinaba lo que decía**.
+
+---
+
+## 11. Commiteé con tres tests en rojo y no me enteré
+
+> **Rompe `I5`** —*auditar el fuente y ejecutar son dos pruebas distintas*— en su versión más
+> tonta: **ejecuté la prueba y no leí el resultado.**
+
+**Qué pasó.** El comando encadenaba `npm test && npm run lint:ci && git commit` con un
+`tail -4` en medio. `tail` **siempre sale con código 0**, así que la cadena siguió aunque los
+tests hubieran fallado. El commit `f930cd8` entró con:
+
+```
+Tests:       3 failed, 73 passed, 76 total
+```
+
+Y con un error de lint. La salida lo decía en pantalla, delante, y se leyó por encima.
+
+**Causa.** Dos errores que se taparon el uno al otro:
+1. **`&&` sobre una tubería mide la tubería, no el comando.** `npm test | tail` devuelve el
+   éxito de `tail`.
+2. **Se dio por hecho el resultado en vez de mirarlo.** El mismo error del `eslint-disable` de
+   esta misma jornada (punto 3), repetido ocho horas después.
+
+**Lección.** *Un `&&` después de una tubería no encadena nada.* Si el resultado de un comando
+decide si se sigue, se comprueba **su** código de salida (`echo $?` o sin tubería), no el de
+lo que va detrás. Y el resumen de los tests se lee **entero**, que son cuatro líneas.
+
+**Lo que fallaba, y merece decirse porque no era ruido:**
+
+| Test | Por qué |
+|---|---|
+| `executions.service.spec` | El constructor pasó a tener 3 argumentos al inyectar el firmador de pases |
+| 3 de `artifacts.controller.spec` | **Defendían la conducta vieja**: usaban el token de sesión por la URL, que es justo lo que se acababa de prohibir |
+
+Los tres segundos son `I9` en estado puro —*un test escrito por quien escribió la pieza puede
+FIJAR el error en vez de cazarlo*—. Se actualizaron a la credencial nueva **y se añadieron tres
+tests que fijan la regla que ahora manda**: token de usuario por la dirección → rechazado; por
+cabecera → aceptado; pase de otra ejecución → rechazado.
+
+**Arreglado en el commit siguiente**, sin reescribir historia: el commit malo se queda, y este
+apunte explica por qué.

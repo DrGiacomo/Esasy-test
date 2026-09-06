@@ -102,9 +102,7 @@ export class ArtifactsController {
   ): JwtPayload {
     if (!token) throw new UnauthorizedException('Missing token');
     try {
-      const payload = this.jwt.verify<JwtPayload & { kind?: string; executionId?: string }>(
-        token,
-      );
+      const payload = this.jwt.verify<JwtPayload & { kind?: string; executionId?: string }>(token);
 
       // Un token de usuario por la direccion se RECHAZA aunque sea valido. Es lo que se
       // hacia hasta el 2026-09-05 y significaba que un vistazo al log de nginx entregaba la
