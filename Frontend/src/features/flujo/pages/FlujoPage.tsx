@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Video, FileText, Play, Container, Sparkles, RefreshCw } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ROUTES } from '@/router/routes';
 import { useResumenDelFlujo, type ResumenDelFlujo } from '../hooks/useResumenDelFlujo';
+import { DiagramaFlujo } from '../components/DiagramaFlujo';
 
 /** Quién hace cada cosa. El área es tan informativa como el estado. */
 const AREAS = {
@@ -122,6 +124,7 @@ const tonoClase: Record<string, string> = {
  */
 export default function FlujoPage() {
   const { datos: resumen, error, cargando, recargar } = useResumenDelFlujo();
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
 
   if (cargando && !resumen) {
     return (
@@ -172,60 +175,95 @@ export default function FlujoPage() {
         ))}
       </div>
 
-      <ol className="grid gap-4 lg:grid-cols-3">
-        {paradas.map((parada, i) => {
-          const area = AREAS[parada.area];
-          const Icono = area.icono;
-          return (
-            <li key={parada.id} className="flex flex-col gap-2">
-              <article
-                className={`flex h-full flex-col gap-3 rounded-xl border border-linea border-l-4 ${area.clase} bg-superficie p-4 transition-transform duration-[180ms] hover:-translate-y-px`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] tracking-widest text-texto-tenue">
+      {resumen && (
+        <DiagramaFlujo
+          resumen={resumen}
+          seleccionado={seleccionado}
+          onSeleccionar={setSeleccionado}
+        />
+      )}
+
+      {/*
+        Las fichas de abajo son el detalle. Al elegir un nodo del diagrama se queda solo el
+        suyo: el diagrama dice DÓNDE está la cosa y la ficha dice QUÉ pasa ahí. Enseñar las
+        seis a la vez debajo del diagrama era contar lo mismo dos veces.
+      */}
+      {seleccionado && (
+        <p className="text-xs text-texto-tenue">
+          Mostrando el paso seleccionado.{' '}
+          <button
+            onClick={() => setSeleccionado(null)}
+            className="font-medium text-ocre-500 underline-offset-2 hover:underline"
+          >
+            Ver los seis
+          </button>
+        </p>
+      )}
+
+      {/*
+        Fichas compactas. El diagrama de arriba ya cuenta el recorrido y las transiciones,
+        así que aquí sobraba repetirlo: se quedan el título, las cuentas y poco más. La
+        explicación larga solo aparece en la ficha que elijas, que es cuando la quieres.
+      */}
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        {paradas
+          .filter((p) => !seleccionado || p.id === seleccionado)
+          .map((parada, i) => {
+            const area = AREAS[parada.area];
+            const Icono = area.icono;
+            const elegida = seleccionado === parada.id;
+            return (
+              <li key={parada.id}>
+                <article
+                  className={`flex h-full flex-col gap-1.5 rounded-lg border border-linea border-l-[3px] ${area.clase} bg-superficie px-3 py-2`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-[10px] text-texto-tenue">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <h2 className="text-sm font-semibold text-texto">{parada.titulo}</h2>
+                    <h2 className="flex-1 truncate text-xs font-semibold text-texto">
+                      {parada.titulo}
+                    </h2>
+                    <Icono size={12} className="shrink-0 text-texto-tenue" />
                   </div>
-                  <Icono size={15} className="mt-0.5 shrink-0 text-texto-tenue" />
-                </div>
 
-                <p className="text-xs leading-relaxed text-texto-tenue">{parada.explica}</p>
+                  <dl className="grid gap-0.5">
+                    {parada.cuentas.map((c) => (
+                      <div key={c.etiqueta} className="flex items-baseline justify-between gap-2">
+                        <dt className="truncate text-[11px] text-texto-tenue">{c.etiqueta}</dt>
+                        <dd
+                          className={`font-mono text-xs tabular-nums ${
+                            c.valor === 0
+                              ? 'text-texto-tenue/50'
+                              : (tonoClase[c.tono ?? ''] ?? 'text-texto')
+                          }`}
+                        >
+                          {c.valor}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
 
-                <dl className="mt-auto grid gap-1 border-t border-linea pt-3">
-                  {parada.cuentas.map((c) => (
-                    <div key={c.etiqueta} className="flex items-baseline justify-between gap-3">
-                      <dt className="text-xs text-texto-tenue">{c.etiqueta}</dt>
-                      <dd
-                        className={`font-mono text-sm tabular-nums ${
-                          c.valor === 0 ? 'text-texto-tenue/50' : (tonoClase[c.tono ?? ''] ?? 'text-texto')
-                        }`}
-                      >
-                        {c.valor}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-
-                {parada.enlace && (
-                  <Link
-                    to={parada.enlace}
-                    className="text-xs font-medium text-ocre-500 transition-colors duration-[180ms] hover:text-sangre-500"
-                  >
-                    Ir →
-                  </Link>
-                )}
-              </article>
-
-              {parada.transicion && (
-                <p className="px-1 font-mono text-[10px] uppercase tracking-widest text-texto-tenue/70">
-                  ↓ {parada.transicion}
-                </p>
-              )}
-            </li>
-          );
-        })}
+                  {elegida && (
+                    <p className="border-t border-linea pt-1.5 text-[11px] leading-relaxed text-texto-tenue">
+                      {parada.explica}
+                      {parada.enlace && (
+                        <>
+                          {' '}
+                          <Link
+                            to={parada.enlace}
+                            className="font-medium text-ocre-500 hover:text-sangre-500"
+                          >
+                            Ir →
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
+                </article>
+              </li>
+            );
+          })}
       </ol>
 
       {resumen && (
