@@ -55,6 +55,40 @@ export class DockerService {
     return { exitCode: result.StatusCode ?? -1 };
   }
 
+  /**
+   * Ultimas lineas que escribio el contenedor. Se lee ANTES de eliminarlo: al hacer
+   * `remove()` los logs se van con el, y hasta hoy nadie los leia. Sin esto, un fallo del
+   * motor -Chromium que no arranca, la red que no resuelve, memoria agotada- y un fallo de
+   * la prueba del usuario se ven exactamente igual desde la pantalla.
+   *
+   * Nunca lanza: esto es diagnostico y el diagnostico no puede tumbar lo que diagnostica
+   * (`S3`). Si no se pueden leer, se devuelve cadena vacia.
+   */
+  async getLogs(containerId: string, lines = 200): Promise<string> {
+    try {
+      const buffer = await this.docker.getContainer(containerId).logs({
+        stdout: true,
+        stderr: true,
+        tail: lines,
+      });
+      // Docker multiplexa stdout/stderr con una cabecera binaria de 8 bytes por trama
+      // cuando el contenedor no tiene TTY. Se filtran los caracteres de control -salvo
+      // salto de linea y tabulador- para que el texto sea legible en la base y en un
+      // archivo. Se hace por codigo de caracter y no con una expresion regular: meter
+      // bytes de control dentro del codigo fuente ya rompio un archivo hoy.
+      const texto = Buffer.isBuffer(buffer) ? buffer.toString('utf8') : String(buffer);
+      return Array.from(texto)
+        .filter((c) => {
+          const codigo = c.charCodeAt(0);
+          return codigo === 9 || codigo === 10 || (codigo >= 32 && codigo !== 127);
+        })
+        .join('');
+    } catch (err) {
+      this.logger.warn(`No se pudieron leer los logs de ${containerId}: ${String(err)}`);
+      return '';
+    }
+  }
+
   async stopAndRemove(containerId: string): Promise<void> {
     try {
       const container = this.docker.getContainer(containerId);

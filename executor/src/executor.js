@@ -199,7 +199,9 @@ async function runTest(browser, db, redis, row) {
   try {
     // Dentro del try: si newContext/newPage fallan, el test se marca FAILED en vez de
     // quedar atascado en RUNNING (la excepción ya no escapa de runTest).
+    const tCtx = Date.now();
     context = await browser.newContext(contextOptions);
+    console.log(`[executor][tiempo] contexto creado: ${Date.now() - tCtx} ms`);
 
     // Traza de Playwright. El colector ya la buscaba como `${test_id}.zip` y la columna
     // `traceUrl` existe desde el diseno: el unico extremo que faltaba era este, el que la
@@ -208,7 +210,10 @@ async function runTest(browser, db, redis, row) {
       .then(() => true)
       .catch((err) => { console.warn(`[executor] tracing no disponible: ${err}`); return false; });
 
+    const tPagina = Date.now();
     page = await context.newPage();
+    console.log(`[executor][tiempo] pagina abierta: ${Date.now() - tPagina} ms`);
+    const tPasos = Date.now();
 
     for (let i = 0; i < activeSteps.length; i++) {
       const step = activeSteps[i];
@@ -223,6 +228,7 @@ async function runTest(browser, db, redis, row) {
       stepResults.push({ stepId: step.id, status: 'PASSED', durationMs: Date.now() - stepStart, errorDetails: null, screenshotUrl: null });
     }
 
+    console.log(`[executor][tiempo] TODOS LOS PASOS: ${Date.now() - tPasos} ms`);
     console.log(`[executor] Test "${test_name}" PASSED`);
 
   } catch (err) {
@@ -263,21 +269,47 @@ async function runTest(browser, db, redis, row) {
         new Promise(r => setTimeout(r, 8000)),
       ]);
     }
-    if (RECORD_VIDEO && page) {
-      const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
-      const timeout = new Promise(r => setTimeout(r, 15000)); // max 15s to save video
-      await Promise.race([page.video()?.saveAs(videoPath).catch(() => null), timeout]);
-    }
+    // El ORDEN de estas tres cosas no es de estilo: es la diferencia entre una ejecucion de
+    // 4 segundos y una de 19.
+    //
+    //   1. La traza se para ANTES de cerrar: despues del cierre ya no se puede sacar.
+    //   2. Se cierra el contexto. Playwright TERMINA DE ESCRIBIR EL VIDEO justo aqui.
+    //   3. Y solo entonces se pide el video.
+    //
+    // Antes, el paso 3 iba primero. `video.saveAs()` no puede resolver mientras el contexto
+    // sigue abierto, asi que esperaba su temporizador ENTERO -15 segundos- en cada ejecucion
+    // que grabase video. Medido el 2026-09-05: de 19.064 ms totales, 482 ms eran los pasos.
+    // Nadie lo noto porque no fallaba nada: el video acababa apareciendo y el test salia
+    // COMPLETED. Solo tardaba quince segundos de mas, siempre.
     if (tracing && context) {
-      // Antes de cerrar el contexto: despues de context.close() la traza ya no se puede sacar.
       const tracePath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.zip`);
+      const tTraza = Date.now();
       await Promise.race([
         context.tracing.stop({ path: tracePath }).catch(() => null),
         new Promise(r => setTimeout(r, 15000)),
       ]);
+      console.log(`[executor][tiempo] guardar traza: ${Date.now() - tTraza} ms`);
     }
+
+    // El video hay que pedirlo ANTES de cerrar (el objeto cuelga de la pagina), pero la
+    // promesa no se resuelve hasta que el cierre termina de escribirlo. Por eso se guarda
+    // la referencia aqui y se espera despues.
+    const video = RECORD_VIDEO && page ? page.video() : null;
+
     if (context) {
+      const tCierre = Date.now();
       await Promise.race([context.close(), new Promise(r => setTimeout(r, 10000))]);
+      console.log(`[executor][tiempo] cerrar contexto: ${Date.now() - tCierre} ms`);
+    }
+
+    if (video) {
+      const videoPath = path.join(ARTIFACTS_DIR, EXECUTION_ID, `${test_id}.webm`);
+      const tVideo = Date.now();
+      await Promise.race([
+        video.saveAs(videoPath).catch((e) => console.warn(`[executor] video: ${e}`)),
+        new Promise(r => setTimeout(r, 15000)),
+      ]);
+      console.log(`[executor][tiempo] guardar video: ${Date.now() - tVideo} ms`);
     }
   }
 
@@ -304,18 +336,38 @@ async function runTest(browser, db, redis, row) {
   await publish(redis, 'result:completed', { testId: test_id, status, durationMs });
 }
 
+/**
+ * Marcas de tiempo del arranque.
+ *
+ * Por que existen: el 2026-09-05 se midio una ejecucion real de 19.506 ms cuyos pasos
+ * sumaban 489 ms. El 97,5 % del tiempo NO era ejecutar, y no habia forma de saber en que
+ * se iba: si en descargar la imagen, en arrancar Chromium o en conectar a la base.
+ *
+ * Esto no optimiza nada. Mide, que es el paso que va antes: dar un tiempo sin calcularlo
+ * es el error que este equipo lleva seis veces cometido (`LECCIONES.md` §1).
+ */
+const T0 = Date.now();
+function marca(nombre) {
+  console.log(`[executor][tiempo] ${nombre}: ${Date.now() - T0} ms desde que arranco el proceso`);
+}
+
 async function main() {
+  marca('proceso vivo');
+
   const db    = new Client({ connectionString: DATABASE_URL });
   const redis = createClient({ url: REDIS_URL });
 
   fs.mkdirSync(path.join(ARTIFACTS_DIR, EXECUTION_ID), { recursive: true });
 
   // Initialize all three in parallel
+  const tArranque = Date.now();
   const [browser] = await Promise.all([
     chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] }),
     db.connect(),
     redis.connect(),
   ]);
+  console.log(`[executor][tiempo] chromium + base + redis: ${Date.now() - tArranque} ms (en paralelo)`);
+  marca('listo para leer los tests');
 
   try {
     const { rows: results } = await db.query(
@@ -337,6 +389,7 @@ async function main() {
       [EXECUTION_ID],
     );
 
+    marca('tests leidos de la base');
     console.log(`[executor] Running ${results.length} test(s) for execution ${EXECUTION_ID} (max ${MAX_PARALLEL} parallel)`);
 
     // Run tests in parallel batches of MAX_PARALLEL
@@ -345,7 +398,9 @@ async function main() {
       await Promise.allSettled(batch.map(row => runTest(browser, db, redis, row)));
     }
 
+    marca('todos los tests terminados');
     await browser.close();
+    marca('navegador cerrado - fin');
     process.exit(0);
 
   } catch (err) {

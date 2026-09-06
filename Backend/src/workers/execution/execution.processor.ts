@@ -2,6 +2,8 @@ import { Logger } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { ExecutionStatus, Prisma, SecretType } from '@prisma/client';
 import { Job } from 'bullmq';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { createClient } from 'redis';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VaultService } from '../../infrastructure/vault/vault.service';
@@ -75,6 +77,13 @@ export class ExecutionProcessor extends WorkerHost {
         select: { maxParallel: true, recordVideo: true },
       });
 
+      const secretEnvVars = await this.getSecretEnvVars(orgId, executionId);
+      // Los VALORES, para taparlos si aparecen en los logs del contenedor. Un secreto que
+      // acaba en cualquier registro ya es publico (`C4`), y los logs se guardan mas abajo.
+      const secretValues = secretEnvVars
+        .map((e) => e.slice(e.indexOf('=') + 1))
+        .filter((v) => v.length >= 4);
+
       const envVars = [
         `EXECUTION_ID=${executionId}`,
         `PROJECT_ID=${projectId}`,
@@ -83,7 +92,7 @@ export class ExecutionProcessor extends WorkerHost {
         `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
         `RECORD_VIDEO=${project?.recordVideo === false ? 'false' : 'true'}`,
         ...(project?.maxParallel != null ? [`MAX_PARALLEL=${project.maxParallel}`] : []),
-        ...(await this.getSecretEnvVars(orgId, executionId)),
+        ...secretEnvVars,
       ];
 
       containerId = await this.docker.runExecutionContainer(executionId, envVars);
@@ -118,7 +127,7 @@ export class ExecutionProcessor extends WorkerHost {
 
       const results = await this.prisma.executionResult.findMany({ where: { executionId } });
       for (const result of results) {
-        const urls = this.artifacts.getArtifactUrls(executionId, result.testId);
+        const urls = await this.artifacts.getArtifactUrls(executionId, result.testId);
         await this.prisma.executionResult.update({ where: { id: result.id }, data: urls });
       }
 
@@ -135,6 +144,13 @@ export class ExecutionProcessor extends WorkerHost {
           `Execution timed out after ${this.timeoutMs()}ms`,
         );
         return;
+      }
+
+      // Si el contenedor no salio limpio, guardar lo que dijo ANTES de que el `finally`
+      // lo elimine. Es la unica forma de distinguir "fallo la prueba del usuario" de
+      // "fallo el motor", que hasta hoy se veian igual desde la pantalla.
+      if (outcome.exitCode !== 0 && containerId) {
+        await this.guardarLogsDelFallo(executionId, containerId, secretValues);
       }
 
       const finalStatus =
@@ -159,6 +175,46 @@ export class ExecutionProcessor extends WorkerHost {
    *  - cancelación del usuario (poll del status en BD cada 3s)
    *  - timeout máximo de ejecución
    */
+  /**
+   * Deja por escrito lo que dijo el contenedor cuando no salio con codigo 0.
+   *
+   * Guarda dos cosas y a proposito:
+   *   - el log completo como artefacto (`executor.log`), que se descarga igual que el video
+   *   - un extracto en `errorMessage`, que es lo que se ve sin buscar nada
+   *
+   * Los valores de los secretos inyectados se tapan antes de escribir nada. Y todo el
+   * metodo es best-effort: si falla, no toca el resultado de la ejecucion (`S3`).
+   */
+  private async guardarLogsDelFallo(
+    executionId: string,
+    containerId: string,
+    secretValues: string[],
+  ): Promise<void> {
+    try {
+      const crudo = await this.docker.getLogs(containerId);
+      if (!crudo.trim()) return;
+
+      const limpio = secretValues.reduce((texto, valor) => texto.split(valor).join('***'), crudo);
+
+      const base = process.env.ARTIFACTS_VOLUME_PATH ?? '/artifacts';
+      const dir = path.join(base, executionId);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(path.join(dir, 'executor.log'), limpio, 'utf8');
+
+      const SALTO = String.fromCharCode(10);
+      const extracto = limpio.trim().split(SALTO).slice(-15).join(SALTO).slice(0, 1500);
+      await this.prisma.execution.updateMany({
+        where: { id: executionId, errorMessage: null },
+        data: {
+          errorMessage: `El ejecutor termino con error. Ultimas lineas:${SALTO}${extracto}`,
+        },
+      });
+      this.logger.log(`Logs del ejecutor guardados para ${executionId}`);
+    } catch (err) {
+      this.logger.warn(`No se pudieron guardar los logs de ${executionId}: ${String(err)}`);
+    }
+  }
+
   private async waitForContainerOrAbort(
     containerId: string,
     executionId: string,

@@ -149,3 +149,43 @@ como archivo nuevo sin seguir en `git status`.
 
 Lo cazó mirar `git status` antes de preparar el commit (`C6`), no un aviso de nadie. Se añadió
 el patrón `.env.viejo*` **antes** de que ningún commit lo viera.
+
+## 13. Una ejecución pasó de 19 segundos a 1,1 — y el culpable llevaba cuatro meses ahí
+
+Al medir el reparto del tiempo de una ejecución real salió esto:
+
+| Marca | ms |
+|---|---|
+| Chromium + base + Redis | 343 |
+| Contexto y página | 53 |
+| **Los tres pasos de la prueba** | **500** |
+| Guardar la traza | 38 |
+| Cerrar el contexto | 29 |
+| **Guardar el vídeo** | **15.000** |
+
+`executor.js` pedía `video.saveAs()` **antes** de cerrar el contexto. Playwright no termina de
+escribir el vídeo hasta el cierre, así que esa promesa no podía resolverse nunca y el
+`Promise.race` esperaba su temporizador entero: **quince segundos exactos, en cada ejecución
+que grabara vídeo.**
+
+**El arreglo son tres líneas movidas de sitio.** Verificado ejecutando: `COMPLETED` en
+**1.100 ms**, con vídeo (firma WebM comprobada), traza de 70 KB y captura final — **los tres
+siguen ahí**. Guardar el vídeo pasó de 15.000 ms a **2 ms**.
+
+**Lo que lo hace bueno no es el número: es el orden en que se hizo.** La hipótesis de partida
+era *«el arranque del contenedor es el cuello»*, y estaba **equivocada** — arrancar cuesta 343
+ms. Si se hubiera optimizado por intuición, se habría trabajado en el sitio que no era. Medir
+primero es lo que convirtió una sospecha en tres líneas.
+
+## 14. El diagnóstico del motor deja de ser invisible
+
+Tres mejoras del `perfeccionar` del día, todas verificadas:
+
+| | |
+|---|---|
+| **Logs del ejecutor** | Se leen antes de borrar el contenedor y se guardan como `executor.log` + un extracto en la ejecución. Antes se borraban con él y un fallo del motor era indistinguible de un fallo de la prueba |
+| **Secretos tapados** | Esos logs pueden llevar dentro los valores inyectados: se sustituyen por `***` antes de escribir nada. **Con test propio** que lo comprueba |
+| **Evidencia con reintento** | 3 intentos y, si algo no aparece, **queda dicho en el log** en vez de un `null` mudo |
+
+Y `main.ts` recuperó su `enableShutdownHooks()` —una línea que el worker sí tenía— así que el
+backend deja de morir por `137`.

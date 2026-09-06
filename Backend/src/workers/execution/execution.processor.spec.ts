@@ -14,6 +14,11 @@ type ProcessorInternals = {
     status: ExecutionStatus,
   ): Promise<void>;
   failExecution(publisher: RedisPublisher, executionId: string, message: string): Promise<void>;
+  guardarLogsDelFallo(
+    executionId: string,
+    containerId: string,
+    secretValues: string[],
+  ): Promise<void>;
 };
 
 function buildProcessor() {
@@ -205,5 +210,71 @@ describe('ExecutionProcessor — ciclo de vida y cancelación del contenedor', (
     await jest.advanceTimersByTimeAsync(150);
 
     await expect(p).resolves.toEqual({ exitCode: null, aborted: 'timeout' });
+  });
+});
+
+/**
+ * Guardar los logs del contenedor es lo que separa "fallo la prueba del usuario" de "fallo
+ * el motor". Pero esos logs pueden llevar dentro los secretos que se inyectaron: un secreto
+ * que acaba en cualquier registro ya es publico (`C4`). Por eso lo que se prueba aqui no es
+ * que guarde, sino que guarde TAPADO.
+ */
+describe('ExecutionProcessor — logs del fallo con los secretos tapados', () => {
+  const fs = jest.requireActual<typeof import('fs')>('fs');
+  const os = jest.requireActual<typeof import('os')>('os');
+  const path = jest.requireActual<typeof import('path')>('path');
+
+  function build(logs: string) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'et-logs-'));
+    process.env.ARTIFACTS_VOLUME_PATH = dir;
+    const prisma = { execution: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) } };
+    const docker = { getLogs: jest.fn().mockResolvedValue(logs) };
+    const processor = new ExecutionProcessor(
+      prisma as never,
+      docker as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    return { dir, prisma, docker, processor: processor as unknown as ProcessorInternals };
+  }
+
+  it('tapa el valor del secreto en el archivo y en el mensaje de error', async () => {
+    const SECRETO = 'sk-clave-de-verdad-1234';
+    const { dir, prisma, processor } = build(
+      `[executor] arrancando${String.fromCharCode(10)}Authorization: ${SECRETO}${String.fromCharCode(10)}fallo`,
+    );
+
+    await processor.guardarLogsDelFallo('exec-1', 'cont-1', [SECRETO]);
+
+    const guardado = fs.readFileSync(path.join(dir, 'exec-1', 'executor.log'), 'utf8');
+    expect(guardado).not.toContain(SECRETO);
+    expect(guardado).toContain('***');
+
+    const mensaje = prisma.execution.updateMany.mock.calls[0][0].data.errorMessage as string;
+    expect(mensaje).not.toContain(SECRETO);
+    expect(mensaje).toContain('El ejecutor termino con error');
+  });
+
+  it('no escribe nada si el contenedor no dijo nada', async () => {
+    const { dir, prisma, processor } = build('   ');
+    await processor.guardarLogsDelFallo('exec-2', 'cont-2', []);
+    expect(fs.existsSync(path.join(dir, 'exec-2', 'executor.log'))).toBe(false);
+    expect(prisma.execution.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('no revienta la ejecucion si no se pueden leer los logs', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'et-logs-'));
+    process.env.ARTIFACTS_VOLUME_PATH = dir;
+    const docker = { getLogs: jest.fn().mockRejectedValue(new Error('boom')) };
+    const processor = new ExecutionProcessor(
+      { execution: { updateMany: jest.fn() } } as never,
+      docker as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    ) as unknown as ProcessorInternals;
+
+    await expect(processor.guardarLogsDelFallo('exec-3', 'cont-3', [])).resolves.toBeUndefined();
   });
 });

@@ -27,6 +27,11 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ?? 3000;
+  // Cierre ordenado: sin esto Docker espera diez segundos, no obtiene respuesta y mata el
+  // proceso (codigo 137), cortando en seco lo que estuviera atendiendo. El worker ya lo
+  // hacia (`bootstrap-worker.ts`); esto es la misma linea que faltaba aqui.
+  app.enableShutdownHooks();
+
   await app.listen(port);
   console.log(`Backend running on http://localhost:${port}/api/v1`);
 }
