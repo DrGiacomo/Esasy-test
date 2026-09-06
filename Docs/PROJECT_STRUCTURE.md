@@ -1,5 +1,8 @@
 # PROJECT STRUCTURE — Fase 1 Entregable 2
 
+> 📖 **Manda sobre este documento: [`BIBLIA_PROYECTO.md`](BIBLIA_PROYECTO.md).** Si algo de
+> aquí la contradice, o se actualiza la biblia, o se descarta lo de aquí.
+
 > **Estado del proyecto:** vive en [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) §6 — este
 > documento no declara fase.  
 > **Versión del documento:** 1.0.0 · entregable de la Fase 1, cerrada el 2026-05-25  

@@ -1,5 +1,8 @@
 # Cómo probar que Easy Test funciona
 
+> 📖 **Manda sobre este documento: [`BIBLIA_PROYECTO.md`](BIBLIA_PROYECTO.md).** Si algo de
+> aquí la contradice, o se actualiza la biblia, o se descarta lo de aquí.
+
 > **Para quién es esto.** Para cualquiera que tenga el proyecto delante y quiera comprobar,
 > en media hora y sin leer código, que hace lo que dice. No hace falta saber programar para
 > seguirlo; sí hace falta tener Docker y Node instalados.

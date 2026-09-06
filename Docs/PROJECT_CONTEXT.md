@@ -1,5 +1,8 @@
 # PROJECT CONTEXT — Plataforma Web de Automatización E2E con IA
 
+> 📖 **Manda sobre este documento: [`BIBLIA_PROYECTO.md`](BIBLIA_PROYECTO.md).** Si algo de
+> aquí la contradice, o se actualiza la biblia, o se descarta lo de aquí.
+
 > **Estado:** Fase 5 — Instalación *(Fases 1-4 cerradas)*  
 > **Versión del documento:** 2.2.0  
 > **Última actualización:** 2026-09-05

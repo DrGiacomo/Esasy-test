@@ -1,5 +1,8 @@
 # PENDIENTES / ROADMAP — Easy-test
 
+> 📖 **Manda sobre este documento: [`BIBLIA_PROYECTO.md`](BIBLIA_PROYECTO.md).** Si algo de
+> aquí la contradice, o se actualiza la biblia, o se descarta lo de aquí.
+
 > **Documento vivo** — consolida todo lo que falta por hacer en la plataforma.
 > **Creado:** 2026-06-26
 > **Fuentes:** `audit-2026-06-15.md` (bugs), `perfeccionar-2026-06-15.md` (mejoras) y notas de proyecto.
