@@ -46,7 +46,7 @@ function stepColor(type: string): string {
     type: 'text-espera-500',
     press: 'text-espera-500',
     select: 'text-espera-500',
-    hover: 'text-tinta-500',
+    hover: 'text-texto-tenue',
   };
   return map[type] ?? 'text-tinta-300';
 }
@@ -116,20 +116,20 @@ function ConvertModal({
   return (
     <form onSubmit={(e) => void handleConvert(e)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-tinta-700 mb-1">Nombre del test</label>
+        <label className="block text-sm font-medium text-texto mb-1">Nombre del test</label>
         <input
           required
           value={testName}
           onChange={(e) => setTestName(e.target.value)}
-          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
+          className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-tinta-700 mb-1">Proyecto</label>
+        <label className="block text-sm font-medium text-texto mb-1">Proyecto</label>
         <select
           value={selectedProjectId}
           onChange={(e) => void handleProjectChange(e.target.value)}
-          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
+          className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
         >
           <option value="">Selecciona un proyecto</option>
           {projects.map((p) => (
@@ -140,13 +140,13 @@ function ConvertModal({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-tinta-700 mb-1">Suite de prueba</label>
+        <label className="block text-sm font-medium text-texto mb-1">Suite de prueba</label>
         <select
           required
           value={suiteId}
           onChange={(e) => setSuiteId(e.target.value)}
           disabled={!selectedProjectId || loadingSuites}
-          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none disabled:opacity-50"
         >
           <option value="">{loadingSuites ? 'Cargando…' : 'Selecciona una suite'}</option>
           {suites.map((s) => (
@@ -161,7 +161,7 @@ function ConvertModal({
           </p>
         )}
       </div>
-      <p className="text-xs text-tinta-500">
+      <p className="text-xs text-texto-tenue">
         Se crearán {rec.steps.length} pasos a partir de esta grabación.
       </p>
       <div className="flex justify-end gap-3 pt-2">
@@ -211,9 +211,9 @@ function RecordingRow({ rec, onDeleted }: { rec: Recording; onDeleted: () => voi
           <Video size={16} className="text-oro-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{rec.targetUrl}</p>
-            <p className="text-xs text-tinta-500">{rec.project.name}</p>
+            <p className="text-xs text-texto-tenue">{rec.project.name}</p>
           </div>
-          <div className="flex items-center gap-4 shrink-0 text-xs text-tinta-500">
+          <div className="flex items-center gap-4 shrink-0 text-xs text-texto-tenue">
             <span className="flex items-center gap-1">
               <Clock size={12} />
               {formatDuration(rec.startedAt, rec.stoppedAt)}
@@ -239,11 +239,11 @@ function RecordingRow({ rec, onDeleted }: { rec: Recording; onDeleted: () => voi
       {open && (
         <div className="border-t border-tinta-700 px-4 py-3 space-y-1 max-h-64 overflow-y-auto">
           {rec.steps.length === 0 ? (
-            <p className="text-xs text-tinta-500 italic">Sin pasos capturados</p>
+            <p className="text-xs text-texto-tenue italic">Sin pasos capturados</p>
           ) : (
             rec.steps.map((step, i) => (
               <div key={i} className="flex items-start gap-2 text-xs">
-                <span className="text-tinta-600 w-5 shrink-0 text-right">{i + 1}.</span>
+                <span className="text-texto-tenue w-5 shrink-0 text-right">{i + 1}.</span>
                 <span className={`font-medium shrink-0 ${stepColor(step.type)}`}>{step.type}</span>
                 <span className="text-tinta-300 truncate">{stepLabel(step)}</span>
               </div>
@@ -284,15 +284,15 @@ export default function RecordingsPage({ projectId }: { projectId?: string }) {
         <div className="flex items-center gap-3">
           <Video size={22} className="text-oro-500" />
           <h1 className="text-xl font-bold text-white">Grabaciones</h1>
-          <span className="ml-auto text-sm text-tinta-500">{recordings.length} grabaciones</span>
+          <span className="ml-auto text-sm text-texto-tenue">{recordings.length} grabaciones</span>
         </div>
       )}
 
       {recordings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-tinta-500">
-          <Video size={36} className="text-tinta-600" />
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-texto-tenue">
+          <Video size={36} className="text-texto-tenue" />
           <p className="text-sm">No hay grabaciones todavía.</p>
-          <p className="text-xs text-tinta-600">
+          <p className="text-xs text-texto-tenue">
             Inicia una sesión en el Grabador y haz click en Detener para guardar.
           </p>
         </div>

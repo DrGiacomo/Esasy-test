@@ -19,7 +19,7 @@ export function RecorderToolbar({ onNavigate, onStop, loading }: Props) {
   return (
     <div className="flex items-center gap-3 border-b border-tinta-700 bg-tinta-800 px-4 py-2">
       <form onSubmit={handleNavigate} className="flex flex-1 items-center gap-2">
-        <Globe size={16} className="text-tinta-500" />
+        <Globe size={16} className="text-texto-tenue" />
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}

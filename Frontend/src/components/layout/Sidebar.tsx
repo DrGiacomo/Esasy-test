@@ -1,13 +1,37 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FolderOpen, Play, Video, Settings, Bot, Film, PanelLeftClose, PanelLeft } from 'lucide-react';
+import {
+  FolderOpen,
+  Play,
+  Video,
+  Settings,
+  Bot,
+  Film,
+  Workflow,
+  PanelLeftClose,
+  PanelLeft,
+} from 'lucide-react';
 import { ROUTES } from '@/router/routes';
 
-const nav = [
+/**
+ * El menú va en dos grupos, y la separación no es estética.
+ *
+ * Arriba, el trabajo del día: proyectos, grabar, ejecutar. Es lo que se pulsa cada pocos
+ * minutos y por eso está donde cae el ratón.
+ *
+ * Abajo, lo que se consulta: el diagrama del flujo —que se mira para saber cómo va todo, no
+ * para hacer algo— y la configuración, que se toca una vez y no se vuelve a mirar en meses.
+ * Mezclarlos hacía que seis entradas compitieran por la misma atención.
+ */
+const navPrincipal = [
   { label: 'Proyectos', icon: FolderOpen, to: ROUTES.PROJECTS },
   { label: 'Grabador', icon: Video, to: ROUTES.RECORDER },
   { label: 'Grabaciones', icon: Film, to: ROUTES.RECORDINGS },
   { label: 'Ejecuciones', icon: Play, to: ROUTES.EXECUTIONS },
+];
+
+const navPie = [
+  { label: 'Flujo', icon: Workflow, to: ROUTES.FLUJO },
   { label: 'Configuración', icon: Settings, to: ROUTES.SETTINGS },
 ];
 
@@ -56,30 +80,16 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-0.5 p-3">
-        {nav.map(({ label, icon: Icon, to }) => (
-          <NavLink
-            key={to}
-            to={to}
-            // El nombre viaja en `title` cuando está plegada: un icono suelto sin texto es
-            // un acertijo, y aquí hay dos que se parecen (Grabador y Grabaciones).
-            title={plegada ? label : undefined}
-            className={({ isActive }) =>
-              // La activa lleva el filo dorado a la izquierda, no un bloque de color: en una
-              // lista de cinco, cinco bloques compiten y ninguno gana.
-              `flex items-center gap-3 rounded-lg border-l-2 py-2 text-sm font-medium transition-colors duration-[180ms] ${
-                plegada ? 'justify-center px-0' : 'px-3'
-              } ${
-                isActive
-                  ? 'border-oro-500 bg-sangre-700 text-oro-200'
-                  : 'border-transparent text-tinta-400 hover:bg-sangre-700/50 hover:text-oro-100'
-              }`
-            }
-          >
-            <Icon size={18} className="shrink-0" />
-            {!plegada && label}
-          </NavLink>
+        {navPrincipal.map((entrada) => (
+          <Entrada key={entrada.to} {...entrada} plegada={plegada} />
         ))}
       </nav>
+
+      <div className="space-y-0.5 border-t border-oro-500/20 p-3">
+        {navPie.map((entrada) => (
+          <Entrada key={entrada.to} {...entrada} plegada={plegada} />
+        ))}
+      </div>
 
       <div className="border-t border-oro-500/20 p-3">
         <button
@@ -102,5 +112,41 @@ export function Sidebar() {
         {!plegada && <p className="mt-2 px-3 text-xs text-tinta-500">v0.1.0</p>}
       </div>
     </aside>
+  );
+}
+
+/** Una entrada del menú. Vive aparte porque ahora se usa en los dos grupos. */
+function Entrada({
+  label,
+  icon: Icon,
+  to,
+  plegada,
+}: {
+  label: string;
+  icon: typeof FolderOpen;
+  to: string;
+  plegada: boolean;
+}) {
+  return (
+    <NavLink
+      to={to}
+      // El nombre viaja en `title` cuando está plegada: un icono suelto sin texto es un
+      // acertijo, y aquí hay dos que se parecen (Grabador y Grabaciones).
+      title={plegada ? label : undefined}
+      className={({ isActive }) =>
+        // La activa lleva el filo dorado a la izquierda, no un bloque de color: en una
+        // lista de seis, seis bloques compiten y ninguno gana.
+        `flex items-center gap-3 rounded-lg border-l-2 py-2 text-sm font-medium transition-colors duration-[180ms] ${
+          plegada ? 'justify-center px-0' : 'px-3'
+        } ${
+          isActive
+            ? 'border-oro-500 bg-sangre-700 text-oro-200'
+            : 'border-transparent text-tinta-400 hover:bg-sangre-700/50 hover:text-oro-100'
+        }`
+      }
+    >
+      <Icon size={18} className="shrink-0" />
+      {!plegada && label}
+    </NavLink>
   );
 }

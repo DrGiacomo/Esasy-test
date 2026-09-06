@@ -20,7 +20,7 @@ export default function ProjectsListPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-tinta-900">Proyectos</h1>
+        <h1 className="text-xl font-bold text-texto">Proyectos</h1>
         <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
           Nuevo proyecto

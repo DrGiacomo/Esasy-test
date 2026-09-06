@@ -9,27 +9,27 @@ export function TestResultCard({ result }: { result: ExecutionResult }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-lg border border-tinta-300 bg-tinta-50 overflow-hidden">
+    <div className="rounded-lg border border-linea bg-superficie overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-tinta-50"
+        className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-superficie"
       >
         <StatusBadge status={result.status} />
-        <span className="flex-1 text-sm font-medium text-tinta-800">
+        <span className="flex-1 text-sm font-medium text-texto">
           {result.test?.name ?? result.testId.slice(0, 8)}
         </span>
         {result.durationMs && (
-          <span className="text-xs text-tinta-500">{(result.durationMs / 1000).toFixed(1)}s</span>
+          <span className="text-xs text-texto-tenue">{(result.durationMs / 1000).toFixed(1)}s</span>
         )}
         {open ? (
-          <ChevronDown size={16} className="text-tinta-500" />
+          <ChevronDown size={16} className="text-texto-tenue" />
         ) : (
-          <ChevronRight size={16} className="text-tinta-500" />
+          <ChevronRight size={16} className="text-texto-tenue" />
         )}
       </button>
 
       {open && (
-        <div className="border-t border-tinta-200 px-4 py-3">
+        <div className="border-t border-linea px-4 py-3">
           {result.errorMessage && (
             <p className="mb-2 rounded bg-fallo-100 px-3 py-2 text-xs text-fallo-500">
               {result.errorMessage}

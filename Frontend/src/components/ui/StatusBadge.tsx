@@ -47,9 +47,9 @@ const colorMap: Record<string, string> = {
   PASSED: 'bg-paso-100 text-paso-500',
   FAILED: 'bg-fallo-100 text-fallo-500',
   CANCELLED: 'bg-omitido-100 text-omitido-500',
-  DRAFT: 'bg-tinta-200 text-tinta-600',
+  DRAFT: 'bg-superficie-2 text-texto-tenue',
   ACTIVE: 'bg-paso-100 text-paso-500',
-  ARCHIVED: 'bg-tinta-200 text-tinta-500',
+  ARCHIVED: 'bg-superficie-2 text-texto-tenue',
   PENDING_APPROVAL: 'bg-espera-100 text-espera-500',
   APPROVED: 'bg-paso-100 text-paso-500',
   REJECTED: 'bg-fallo-100 text-fallo-500',
@@ -58,7 +58,7 @@ const colorMap: Record<string, string> = {
 };
 
 export function StatusBadge({ status }: { status: Status }) {
-  const cls = colorMap[status] ?? 'bg-tinta-200 text-tinta-600';
+  const cls = colorMap[status] ?? 'bg-superficie-2 text-texto-tenue';
   // Un estado que no conocemos se enseña tal cual: inventarle una traducción sería peor
   // que mostrar el valor crudo, porque nadie podría buscarlo después.
   const leyenda = texto[status] ?? status;

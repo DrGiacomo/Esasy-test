@@ -17,9 +17,9 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-tinta-900">Configuración</h1>
+      <h1 className="mb-6 text-xl font-bold text-texto">Configuración</h1>
 
-      <div className="mb-6 flex border-b border-tinta-300">
+      <div className="mb-6 flex border-b border-linea">
         {tabs.map((t) => (
           <button
             key={t}
@@ -27,7 +27,7 @@ export default function SettingsPage() {
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === t
                 ? 'border-sangre-600 text-sangre-600'
-                : 'border-transparent text-tinta-500 hover:text-tinta-700'
+                : 'border-transparent text-texto-tenue hover:text-texto'
             }`}
           >
             {t}

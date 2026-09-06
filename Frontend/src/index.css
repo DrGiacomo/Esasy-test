@@ -74,6 +74,20 @@
   --color-omitido-500: #8A7264;  /* SKIPPED */
   --color-omitido-100: #F0EAE4;
 
+  /* ── Superficies: los que cambian con el tema ───────────────────────────
+     Estos NO son colores: son papeles. `--color-fondo` es el papel de la
+     página y `--color-superficie` el de una tarjeta encima. Los componentes
+     usan estos, nunca un tono concreto de `tinta`, y por eso el tema oscuro
+     es una redefinición de seis variables y no una segunda hoja de estilos.
+
+     Aquí viven los valores del tema CLARO. El oscuro los reescribe abajo. */
+  --color-fondo: #F5EFE6;
+  --color-superficie: #FFFDF9;
+  --color-superficie-2: #EBE1D3;   /* el paso por encima, lo hundido */
+  --color-texto: #1A1113;
+  --color-texto-tenue: #7E6659;    /* medido: 5,04:1 sobre superficie */
+  --color-linea: #DCCFBE;
+
   /* ── Tiempos ────────────────────────────────────────────────────────────
      Los de Alma. Interacción entre 0,12 y 0,2 s; nada más largo salvo las
      transiciones de vista. */
@@ -82,11 +96,46 @@
   --animate-vista: 620ms;
 }
 
+/* =============================================================================
+   Tema oscuro — vinotinto
+   =============================================================================
+   El mismo mundo de las cortinas de entrada: no es «gris oscuro», es vino. El
+   fondo lleva el rojo dentro, y por eso el dorado y el sangre siguen leyéndose
+   encima en vez de flotar sobre un negro neutro.
+
+   Tres estados, no dos: el usuario puede elegir claro, oscuro, o no elegir. Lo
+   normal es no elegir, y entonces manda lo que diga su sistema.
+   ============================================================================= */
+
+:root[data-theme="dark"] {
+  --color-fondo: #170A0C;
+  --color-superficie: #220F12;
+  --color-superficie-2: #2E1519;
+  --color-texto: #F2E8DC;
+  --color-texto-tenue: #BCA396;   /* medido: 7,1:1 sobre la superficie oscura */
+  --color-linea: #4A2428;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* `:not([data-theme="light"])` para que una elección explícita de tema claro
+     gane sobre un sistema en oscuro. Sin esto, quien elige claro no lo obtiene. */
+  :root:not([data-theme="light"]) {
+    --color-fondo: #170A0C;
+    --color-superficie: #220F12;
+    --color-superficie-2: #2E1519;
+    --color-texto: #F2E8DC;
+    --color-texto-tenue: #BCA396;
+    --color-linea: #4A2428;
+  }
+}
+
 @layer base {
   body {
-    background-color: var(--color-tinta-100);
-    color: var(--color-tinta-900);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
     -webkit-font-smoothing: antialiased;
+    /* El cambio de tema se ve, no salta. 220 ms, como el plegado de la barra. */
+    transition: background-color 220ms ease, color 220ms ease;
   }
   * {
     box-sizing: border-box;

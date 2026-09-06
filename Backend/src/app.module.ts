@@ -4,6 +4,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { configSchema } from './infrastructure/config/config.schema';
 import { VaultModule } from './infrastructure/vault/vault.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { FlujoModule } from './modules/flujo/flujo.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
@@ -38,6 +39,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     SecretsModule,
     GitModule,
     ReportsModule,
+    FlujoModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

@@ -57,8 +57,8 @@ export function UiModePanel() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="mb-1 text-sm font-semibold text-tinta-900">Cómo quieres ver la plataforma</h2>
-      <p className="mb-4 text-sm text-tinta-500">
+      <h2 className="mb-1 text-sm font-semibold text-texto">Cómo quieres ver la plataforma</h2>
+      <p className="mb-4 text-sm text-texto-tenue">
         Solo afecta a tu cuenta. Puedes cambiarlo cuando quieras y no se pierde nada al hacerlo.
       </p>
 
@@ -75,19 +75,19 @@ export function UiModePanel() {
               className={`w-full rounded-lg border p-4 text-left transition-colors disabled:opacity-60 ${
                 activo
                   ? 'border-oro-500 bg-sangre-50 ring-2 ring-sangre-200'
-                  : 'border-tinta-300 bg-tinta-50 hover:border-tinta-300'
+                  : 'border-linea bg-superficie hover:border-linea'
               }`}
             >
               <div className="flex items-center gap-2">
                 <span
                   className={`h-4 w-4 shrink-0 rounded-full border-4 ${
-                    activo ? 'border-sangre-600 bg-tinta-50' : 'border-tinta-300 bg-tinta-50'
+                    activo ? 'border-sangre-600 bg-superficie' : 'border-linea bg-superficie'
                   }`}
                 />
-                <span className="text-sm font-medium text-tinta-900">{o.titulo}</span>
+                <span className="text-sm font-medium text-texto">{o.titulo}</span>
                 {activo && <span className="text-xs text-sangre-600">· activo</span>}
               </div>
-              <p className="ml-6 mt-1 text-sm text-tinta-600">{o.texto}</p>
+              <p className="ml-6 mt-1 text-sm text-texto-tenue">{o.texto}</p>
             </button>
           );
         })}

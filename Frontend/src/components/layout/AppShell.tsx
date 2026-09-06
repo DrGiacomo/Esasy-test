@@ -14,7 +14,7 @@ export function AppShell() {
           aquí. La transición envuelve al Outlet porque este es el único sitio por donde
           pasan las trece vistas.
         */}
-        <main className="flex-1 overflow-y-auto bg-tinta-100 p-6">
+        <main className="flex-1 overflow-y-auto bg-fondo p-6">
           <TransicionVista>
             <Outlet />
           </TransicionVista>

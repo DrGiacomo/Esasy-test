@@ -23,15 +23,15 @@ export default function RegisterPage() {
     setForm((p) => ({ ...p, [key]: e.target.value }));
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-tinta-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-superficie p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
           <Bot size={40} className="text-sangre-600" />
-          <h1 className="text-2xl font-bold text-tinta-900">E2E Platform</h1>
+          <h1 className="text-2xl font-bold text-texto">E2E Platform</h1>
         </div>
 
-        <div className="rounded-xl border border-tinta-300 bg-tinta-50 p-6 shadow-sm">
-          <h2 className="mb-6 text-lg font-semibold text-tinta-900">Crear cuenta</h2>
+        <div className="rounded-xl border border-linea bg-superficie p-6 shadow-sm">
+          <h2 className="mb-6 text-lg font-semibold text-texto">Crear cuenta</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
@@ -46,7 +46,7 @@ export default function RegisterPage() {
               },
             ].map(({ key, label, type, placeholder }) => (
               <div key={key}>
-                <label className="mb-1 block text-sm font-medium text-tinta-700">{label}</label>
+                <label className="mb-1 block text-sm font-medium text-texto">{label}</label>
                 <input
                   type={type}
                   required
@@ -60,7 +60,7 @@ export default function RegisterPage() {
                   maxLength={key === 'password' ? 64 : 80}
                   value={form[key as keyof typeof form]}
                   onChange={field(key as keyof typeof form)}
-                  className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
+                  className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
                   placeholder={placeholder}
                 />
               </div>
@@ -75,7 +75,7 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-tinta-500">
+          <p className="mt-4 text-center text-sm text-texto-tenue">
             ¿Ya tienes cuenta?{' '}
             <Link to={ROUTES.LOGIN} className="font-medium text-sangre-600 hover:underline">
               Iniciar sesión

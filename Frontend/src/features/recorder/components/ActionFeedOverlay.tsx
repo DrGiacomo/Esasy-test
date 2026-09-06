@@ -10,7 +10,7 @@ export function ActionFeedOverlay({ steps }: { steps: CapturedStep[] }) {
       <span className="font-medium text-oro-300">{last.type}</span>
       {last.selector && <span className="ml-2 text-tinta-300 font-mono">{last.selector}</span>}
       {last.url && <span className="ml-2 text-tinta-300">{last.url}</span>}
-      <span className="ml-3 text-tinta-500">{steps.length} acciones capturadas</span>
+      <span className="ml-3 text-texto-tenue">{steps.length} acciones capturadas</span>
     </div>
   );
 }

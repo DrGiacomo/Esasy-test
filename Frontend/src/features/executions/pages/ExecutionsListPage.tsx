@@ -43,7 +43,7 @@ export default function ExecutionsListPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-tinta-900">Ejecuciones</h1>
+      <h1 className="mb-6 text-xl font-bold text-texto">Ejecuciones</h1>
 
       {loading && (
         <div className="flex justify-center py-12">
@@ -66,20 +66,20 @@ export default function ExecutionsListPage() {
             return (
               <div
                 key={e.id}
-                className="flex items-center gap-2 rounded-lg border border-tinta-300 bg-tinta-50 px-4 py-3 hover:border-sangre-200"
+                className="flex items-center gap-2 rounded-lg border border-linea bg-superficie px-4 py-3 hover:border-sangre-200"
               >
                 <Link
                   to={ROUTES.EXECUTION_DETAIL(e.id)}
                   className="flex flex-1 items-center gap-4 min-w-0"
                 >
                   <StatusBadge status={e.status} />
-                  <span className="flex-1 text-sm text-tinta-700 font-mono">
+                  <span className="flex-1 text-sm text-texto font-mono">
                     {e.id.slice(0, 8)}…
                   </span>
-                  <span className="text-xs text-tinta-500">
+                  <span className="text-xs text-texto-tenue">
                     {new Date(e.createdAt).toLocaleString()}
                   </span>
-                  <ChevronRight size={16} className="text-tinta-500" />
+                  <ChevronRight size={16} className="text-texto-tenue" />
                 </Link>
                 <Button
                   size="sm"

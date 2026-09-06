@@ -34,35 +34,35 @@ export function CreateProjectModal({ open, onClose, onCreated }: Props) {
     <Modal open={open} title="Nuevo proyecto" onClose={onClose}>
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-tinta-700">Nombre</label>
+          <label className="mb-1 block text-sm font-medium text-texto">Nombre</label>
           <input
             required
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
+            className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
             placeholder="Mi proyecto"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-tinta-700">URL base</label>
+          <label className="mb-1 block text-sm font-medium text-texto">URL base</label>
           <input
             required
             type="url"
             value={form.baseUrl}
             onChange={(e) => setForm((p) => ({ ...p, baseUrl: e.target.value }))}
-            className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
+            className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
             placeholder="https://mi-app.com"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-tinta-700">
+          <label className="mb-1 block text-sm font-medium text-texto">
             Descripción (opcional)
           </label>
           <textarea
             rows={2}
             value={form.description}
             onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-            className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
+            className="w-full rounded-lg border border-linea px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
           />
         </div>
         {error && <p className="text-sm text-fallo-500">{error}</p>}

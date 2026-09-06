@@ -25,7 +25,7 @@ describe('StatusBadge', () => {
   it('un estado desconocido se enseña tal cual, sin inventarle traducción', () => {
     render(<StatusBadge status="WAT" />);
     const etiqueta = screen.getByText('WAT');
-    expect(etiqueta.className).toContain('text-tinta-600');
+    expect(etiqueta.className).toContain('text-texto-tenue');
     expect(etiqueta).not.toHaveAttribute('title');
   });
 });

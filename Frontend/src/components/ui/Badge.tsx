@@ -4,7 +4,7 @@ interface BadgeProps {
 }
 
 const colorMap = {
-  gray: 'bg-tinta-200 text-tinta-600',
+  gray: 'bg-superficie-2 text-texto-tenue',
   indigo: 'bg-sangre-100 text-sangre-700',
   emerald: 'bg-paso-100 text-paso-500',
   red: 'bg-fallo-100 text-fallo-500',

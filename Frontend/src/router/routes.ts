@@ -6,6 +6,7 @@ export const ROUTES = {
   TESTS: (suiteId: string) => `/suites/${suiteId}/tests`,
   TEST_DETAIL: (id: string) => `/tests/${id}`,
   FLOW_EDITOR: (testId: string) => `/tests/${testId}/editor`,
+  FLUJO: '/flujo',
   RECORDER: '/recorder',
   RECORDINGS: '/recordings',
   EXECUTIONS: '/executions',

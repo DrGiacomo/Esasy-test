@@ -37,7 +37,7 @@ export function HealingProposalCard({ proposal, onResolved }: Props) {
   return (
     <div className="rounded-xl border border-espera-100 bg-espera-100 p-4">
       <p className="mb-1 text-sm font-semibold text-espera-500">Propuesta de auto-healing</p>
-      <p className="mb-3 text-xs text-tinta-600">
+      <p className="mb-3 text-xs text-texto-tenue">
         Confianza: <strong>{Math.round(proposal.confidence * 100)}%</strong> — {proposal.reasoning}
       </p>
       <div className="mb-3 grid grid-cols-2 gap-2 text-xs font-mono">

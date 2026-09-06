@@ -34,7 +34,7 @@ export function StepList({ steps, testId, onUpdate }: Props) {
 
   if (steps.length === 0) {
     return (
-      <p className="text-sm text-tinta-500">
+      <p className="text-sm text-texto-tenue">
         Sin pasos. Usa el editor visual o el grabador para añadir pasos.
       </p>
     );
@@ -45,9 +45,9 @@ export function StepList({ steps, testId, onUpdate }: Props) {
       {steps.map((step, i) => {
         const detalle = technicalDetail(step);
         return (
-          <div key={step.id} className="rounded-lg bg-tinta-50 px-3 py-2 text-sm">
+          <div key={step.id} className="rounded-lg bg-superficie px-3 py-2 text-sm">
             <div className="flex items-center gap-3">
-              <span className="w-6 text-center text-xs font-mono text-tinta-500">{i + 1}</span>
+              <span className="w-6 text-center text-xs font-mono text-texto-tenue">{i + 1}</span>
               <span className="w-24 font-medium text-sangre-600">
                 {ACTION_LABELS[step.action] ?? step.action}
               </span>
@@ -56,15 +56,15 @@ export function StepList({ steps, testId, onUpdate }: Props) {
                 exactamente lo de antes, el selector en monoespaciada.
               */}
               {sencillo ? (
-                <span className="flex-1 truncate text-tinta-700">{describeStep(step)}</span>
+                <span className="flex-1 truncate text-texto">{describeStep(step)}</span>
               ) : (
-                <span className="flex-1 truncate font-mono text-xs text-tinta-700">
+                <span className="flex-1 truncate font-mono text-xs text-texto">
                   {step.selector ?? step.value ?? ''}
                 </span>
               )}
               <button
                 onClick={() => void handleDelete(step.id)}
-                className="rounded p-1 text-tinta-500 hover:bg-fallo-100 hover:text-fallo-500"
+                className="rounded p-1 text-texto-tenue hover:bg-fallo-100 hover:text-fallo-500"
               >
                 <Trash2 size={14} />
               </button>
@@ -72,10 +72,10 @@ export function StepList({ steps, testId, onUpdate }: Props) {
             {/* Escondido, nunca inaccesible: el detalle esta a un clic tambien en SENCILLO. */}
             {sencillo && detalle && (
               <details className="ml-9 mt-1">
-                <summary className="cursor-pointer text-xs text-tinta-500 hover:text-tinta-600">
+                <summary className="cursor-pointer text-xs text-texto-tenue hover:text-texto-tenue">
                   ver detalle tecnico
                 </summary>
-                <p className="mt-1 font-mono text-xs text-tinta-500">{detalle}</p>
+                <p className="mt-1 font-mono text-xs text-texto-tenue">{detalle}</p>
               </details>
             )}
           </div>

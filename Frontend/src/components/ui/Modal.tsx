@@ -24,12 +24,12 @@ export function Modal({ open, title, onClose, children, width = 'max-w-lg' }: Mo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={`relative z-10 w-full ${width} rounded-xl bg-tinta-50 shadow-xl`}>
-        <div className="flex items-center justify-between border-b border-tinta-300 px-6 py-4">
-          <h2 className="text-lg font-semibold text-tinta-900">{title}</h2>
+      <div className={`relative z-10 w-full ${width} rounded-xl bg-superficie shadow-xl`}>
+        <div className="flex items-center justify-between border-b border-linea px-6 py-4">
+          <h2 className="text-lg font-semibold text-texto">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-tinta-500 hover:bg-tinta-200 hover:text-tinta-600"
+            className="rounded-lg p-1 text-texto-tenue hover:bg-superficie-2 hover:text-texto-tenue"
           >
             <X size={20} />
           </button>

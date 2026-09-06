@@ -73,10 +73,10 @@ export default function FlowEditorPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-tinta-300 bg-tinta-50 px-6 py-3">
+      <div className="flex items-center justify-between border-b border-linea bg-superficie px-6 py-3">
         <div>
-          <h1 className="text-base font-semibold text-tinta-900">{test.name}</h1>
-          <p className="text-xs text-tinta-500">Editor visual — {steps.length} pasos</p>
+          <h1 className="text-base font-semibold text-texto">{test.name}</h1>
+          <p className="text-xs text-texto-tenue">Editor visual — {steps.length} pasos</p>
         </div>
         <button
           onClick={() => void handleSave()}

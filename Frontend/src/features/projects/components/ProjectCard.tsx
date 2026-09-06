@@ -19,7 +19,7 @@ export function ProjectCard({ project, onArchive }: Props) {
   }
 
   return (
-    <div className="group flex items-center gap-4 rounded-xl border border-tinta-300 bg-tinta-50 p-5 shadow-sm transition-all hover:border-oro-300 hover:shadow-md">
+    <div className="group flex items-center gap-4 rounded-xl border border-linea bg-superficie p-5 shadow-sm transition-all hover:border-oro-300 hover:shadow-md">
       <Link
         to={ROUTES.PROJECT_DETAIL(project.id)}
         className="flex flex-1 items-center gap-4 min-w-0"
@@ -28,17 +28,17 @@ export function ProjectCard({ project, onArchive }: Props) {
           <Globe size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-tinta-900 truncate">{project.name}</p>
-          <p className="text-xs text-tinta-500 truncate">{project.baseUrl}</p>
+          <p className="font-semibold text-texto truncate">{project.name}</p>
+          <p className="text-xs text-texto-tenue truncate">{project.baseUrl}</p>
         </div>
         <ChevronRight
           size={18}
-          className="text-tinta-500 group-hover:text-oro-500 transition-colors shrink-0"
+          className="text-texto-tenue group-hover:text-oro-500 transition-colors shrink-0"
         />
       </Link>
       <button
         onClick={handleArchive}
-        className="shrink-0 rounded-lg p-2 text-tinta-500 hover:bg-fallo-100 hover:text-fallo-500 transition-colors"
+        className="shrink-0 rounded-lg p-2 text-texto-tenue hover:bg-fallo-100 hover:text-fallo-500 transition-colors"
         title="Eliminar proyecto"
       >
         <Trash2 size={16} />

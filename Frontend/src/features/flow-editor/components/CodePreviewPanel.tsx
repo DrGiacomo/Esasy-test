@@ -5,7 +5,7 @@ export function CodePreviewPanel({ code }: { code: string | null }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-t border-tinta-300">
+    <div className="border-t border-linea">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-2 bg-tinta-800 px-4 py-2 text-xs font-medium text-tinta-300 hover:bg-tinta-700"

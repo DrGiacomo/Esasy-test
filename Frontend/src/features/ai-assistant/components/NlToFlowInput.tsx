@@ -33,7 +33,7 @@ export function NlToFlowInput({ projectId, onGenerated }: Props) {
         onChange={(e) => setPrompt(e.target.value)}
         rows={2}
         placeholder="Describe el flujo en lenguaje natural, ej: «Ir al login, escribir usuario y contraseña, hacer clic en entrar y verificar el dashboard»"
-        className="flex-1 resize-none bg-transparent text-sm text-tinta-700 placeholder-tinta-400 focus:outline-none"
+        className="flex-1 resize-none bg-transparent text-sm text-texto placeholder-tinta-400 focus:outline-none"
       />
       <Button size="sm" type="submit" loading={loading} className="self-end">
         Generar

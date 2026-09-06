@@ -81,7 +81,7 @@ export default function ExecutionDetailPage() {
         <LoadingSpinner />
       </div>
     );
-  if (!execution) return <p className="text-tinta-500">Ejecución no encontrada</p>;
+  if (!execution) return <p className="text-texto-tenue">Ejecución no encontrada</p>;
 
   const displayStatus = status ?? execution.status;
 
@@ -89,7 +89,7 @@ export default function ExecutionDetailPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-tinta-900">Ejecución</h1>
+          <h1 className="text-xl font-bold text-texto">Ejecución</h1>
           <StatusBadge status={displayStatus} />
         </div>
         <div className="flex items-center gap-2">

@@ -87,7 +87,7 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
       {!connected && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-tinta-900/90 z-10 gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-oro-500 border-t-transparent" />
-          <p className="text-sm text-tinta-500">Iniciando sesión de grabación…</p>
+          <p className="text-sm text-texto-tenue">Iniciando sesión de grabación…</p>
         </div>
       )}
 
@@ -105,7 +105,7 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
           draggable={false}
         />
       ) : (
-        connected && <p className="text-sm text-tinta-500">Sin señal de video… esperando frames</p>
+        connected && <p className="text-sm text-texto-tenue">Sin señal de video… esperando frames</p>
       )}
 
       {/* Hint */}

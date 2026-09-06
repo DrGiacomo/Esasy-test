@@ -11,7 +11,7 @@ const ACTION_COLORS: Record<string, string> = {
   fill: 'bg-espera-100 text-espera-500 border-espera-100',
   assert_visible: 'bg-espera-100 text-espera-500 border-espera-100',
   assert_text: 'bg-espera-100 text-espera-500 border-espera-100',
-  screenshot: 'bg-tinta-200 text-tinta-600 border-tinta-300',
+  screenshot: 'bg-superficie-2 text-texto-tenue border-linea',
 };
 
 interface Props {
@@ -33,7 +33,7 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const colorCls = ACTION_COLORS[step.action] ?? 'bg-tinta-200 text-tinta-600 border-tinta-300';
+  const colorCls = ACTION_COLORS[step.action] ?? 'bg-superficie-2 text-texto-tenue border-linea';
 
   return (
     <div
@@ -43,13 +43,13 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
       className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
         isSelected
           ? 'border-oro-500 ring-2 ring-sangre-200'
-          : 'border-tinta-300 bg-tinta-50 hover:border-tinta-300'
+          : 'border-linea bg-superficie hover:border-linea'
       }`}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab text-tinta-500 hover:text-tinta-600"
+        className="cursor-grab text-texto-tenue hover:text-texto-tenue"
       >
         <GripVertical size={16} />
       </button>
@@ -60,9 +60,9 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
 
       {/* En SENCILLO, la frase; en COMPLEJO, el selector como siempre. */}
       {sencillo ? (
-        <span className="flex-1 truncate text-sm text-tinta-700">{describeStep(step)}</span>
+        <span className="flex-1 truncate text-sm text-texto">{describeStep(step)}</span>
       ) : (
-        <span className="flex-1 truncate font-mono text-xs text-tinta-700">
+        <span className="flex-1 truncate font-mono text-xs text-texto">
           {step.selector ?? step.value ?? step.description ?? ''}
         </span>
       )}
