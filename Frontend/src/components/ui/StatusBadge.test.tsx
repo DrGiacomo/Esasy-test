@@ -3,18 +3,29 @@ import { render, screen } from '@testing-library/react';
 import { StatusBadge } from './StatusBadge';
 
 describe('StatusBadge', () => {
-  it('muestra el texto del estado', () => {
+  it('traduce el estado a algo legible', () => {
     render(<StatusBadge status="COMPLETED" />);
-    expect(screen.getByText('COMPLETED')).toBeInTheDocument();
+    expect(screen.getByText('Terminada')).toBeInTheDocument();
   });
 
-  it('aplica la clase de color de un estado conocido', () => {
+  it('usa el color semántico del fallo, no el rojo de la marca', () => {
     render(<StatusBadge status="FAILED" />);
-    expect(screen.getByText('FAILED').className).toContain('text-red-700');
+    const etiqueta = screen.getByText('Falló');
+    expect(etiqueta.className).toContain('text-fallo-500');
+    // El sangre es el color de la marca y está en el botón de Entrar: si un fallo lo
+    // usara, «Entrar» y «Falló» se verían igual.
+    expect(etiqueta.className).not.toContain('sangre');
   });
 
-  it('usa el color por defecto para un estado desconocido', () => {
+  it('conserva el valor técnico en el título, para poder buscarlo', () => {
+    render(<StatusBadge status="PENDING_APPROVAL" />);
+    expect(screen.getByText('Pendiente de aprobar')).toHaveAttribute('title', 'PENDING_APPROVAL');
+  });
+
+  it('un estado desconocido se enseña tal cual, sin inventarle traducción', () => {
     render(<StatusBadge status="WAT" />);
-    expect(screen.getByText('WAT').className).toContain('text-gray-600');
+    const etiqueta = screen.getByText('WAT');
+    expect(etiqueta.className).toContain('text-tinta-600');
+    expect(etiqueta).not.toHaveAttribute('title');
   });
 });

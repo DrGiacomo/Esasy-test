@@ -12,11 +12,13 @@ const nav = [
 
 export function Sidebar() {
   return (
-    <aside className="flex h-screen w-56 flex-col bg-gray-900">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-4 border-b border-gray-700">
-        <Bot size={22} className="text-indigo-400" />
-        <span className="text-base font-semibold text-white">E2E Platform</span>
+    // La barra es lo unico permanentemente oscuro de la aplicacion: da el «Cripta» sin
+    // oscurecer las pantallas donde se trabaja, que se leen mejor claras.
+    <aside className="flex h-screen w-56 flex-col bg-sangre-900">
+      {/* Marca */}
+      <div className="flex h-16 items-center gap-2 border-b border-oro-500/20 px-4">
+        <Bot size={22} className="text-oro-500" />
+        <span className="text-base font-semibold text-oro-100">Easy Test</span>
       </div>
 
       {/* Nav */}
@@ -26,10 +28,12 @@ export function Sidebar() {
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              // La activa lleva el filo dorado a la izquierda, no un bloque de color: en una
+              // lista de seis, seis bloques compiten y ninguno gana.
+              `flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors duration-[180ms] ${
                 isActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  ? 'border-oro-500 bg-sangre-700 text-oro-200'
+                  : 'border-transparent text-tinta-400 hover:bg-sangre-700/50 hover:text-oro-100'
               }`
             }
           >
@@ -39,8 +43,8 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-gray-700 p-3">
-        <p className="text-xs text-gray-500">v0.1.0</p>
+      <div className="border-t border-oro-500/20 p-3">
+        <p className="text-xs text-tinta-500">v0.1.0</p>
       </div>
     </aside>
   );

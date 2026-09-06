@@ -1,10 +1,158 @@
 @import "tailwindcss";
 
+/* =============================================================================
+   Sangre y Oro — la paleta de Easy Test
+   =============================================================================
+   TODO el color del producto vive aquí y en ningún otro sitio. Antes estaba
+   escrito a mano por decenas de archivos: 40 veces un gris, 21 un índigo. Con
+   eso, cambiar el aspecto era buscar y reemplazar en medio proyecto y olvidarse
+   de tres sitios que nadie mira.
+
+   Tailwind v4 lee la configuración de AQUÍ, no de `tailwind.config.ts`. Ese
+   archivo existía con una paleta `brand` que no se aplicaba a nada y que nadie
+   usaba: se borró el 2026-09-06.
+
+   Los nombres dicen PARA QUÉ sirve cada color, no de qué color es. `--color-peligro`
+   se puede cambiar de rojo a naranja; `--color-rojo` no se puede cambiar sin mentir.
+   ============================================================================= */
+
+@theme {
+  /* ── Marca ──────────────────────────────────────────────────────────────
+     Rojo sangre y dorado mandan; el ocre solo aparece en detalles. */
+  --color-sangre-50:  #FBF2F2;
+  --color-sangre-100: #F6E0E1;
+  --color-sangre-200: #E9BCBE;
+  --color-sangre-400: #C0484C;
+  --color-sangre-500: #8E1319;   /* sangre vivo — el acento que se ve */
+  --color-sangre-600: #6B0F14;   /* sangre — el dominante */
+  --color-sangre-700: #4A0A0E;   /* sangre honda — fondos y sombras */
+  --color-sangre-900: #2A0507;
+
+  --color-oro-100: #F7EDD2;
+  --color-oro-200: #EFDCA8;
+  --color-oro-300: #E3C567;      /* dorado claro — texto sobre fondo oscuro */
+  --color-oro-500: #C9A227;      /* dorado — el segundo dominante */
+  --color-oro-600: #A8851D;
+  --color-oro-700: #7E6315;
+
+  --color-ocre-300: #D9B27A;
+  --color-ocre-500: #B07A2B;     /* ocre — detalles, etiquetas, líneas */
+  --color-ocre-700: #7E5619;
+
+  /* ── Neutros ────────────────────────────────────────────────────────────
+     No son grises: llevan rojo dentro. Un gris puro al lado del dorado se ve
+     sucio, y al lado del sangre se ve azulado. */
+  --color-tinta-50:  #FBF8F4;
+  --color-tinta-100: #F5EFE6;
+  --color-tinta-200: #EBE1D3;
+  --color-tinta-300: #DCCFBE;
+  --color-tinta-400: #B7A597;
+  --color-tinta-500: #8A7264;
+  --color-tinta-600: #6E5B52;
+  --color-tinta-700: #4A3B36;
+  --color-tinta-800: #2A1E20;
+  --color-tinta-900: #1A1113;
+
+  /* ── Semánticos ─────────────────────────────────────────────────────────
+     Separados de la marca a propósito: el verde de «pasó» no puede depender
+     de que un día cambiemos el color corporativo. Y en una herramienta de
+     pruebas, estos tres colores son datos, no decoración. */
+  --color-paso-500:   #2F7D5B;   /* PASSED */
+  --color-paso-100:   #E3F2EA;
+  --color-fallo-500:  #B3261E;   /* FAILED — deliberadamente distinto del sangre
+                                    de marca: un fallo no puede confundirse con
+                                    un adorno de la interfaz */
+  --color-fallo-100:  #FBE9E7;
+  --color-espera-500: #B07A2B;   /* RUNNING / QUEUED — reusa el ocre */
+  --color-espera-100: #F7EEE0;
+  --color-omitido-500: #8A7264;  /* SKIPPED */
+  --color-omitido-100: #F0EAE4;
+
+  /* ── Tiempos ────────────────────────────────────────────────────────────
+     Los de Alma. Interacción entre 0,12 y 0,2 s; nada más largo salvo las
+     transiciones de vista. */
+  --animate-rapido: 120ms;
+  --animate-normal: 180ms;
+  --animate-vista: 620ms;
+}
+
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    background-color: var(--color-tinta-100);
+    color: var(--color-tinta-900);
+    -webkit-font-smoothing: antialiased;
   }
   * {
     box-sizing: border-box;
+  }
+
+  /* Foco visible en todo lo que se puede enfocar con el teclado. Antes cada
+     componente lo declaraba por su cuenta, con tres colores distintos. */
+  :focus-visible {
+    outline: 2px solid var(--color-oro-500);
+    outline-offset: 2px;
+  }
+}
+
+/* =============================================================================
+   Transición entre vistas — «Bandas»
+   =============================================================================
+   Siete franjas que se retiran hacia la derecha, escalonadas. Sale del
+   `stagger` del dashboard de Alma, girado 90 grados, y se decidió el
+   2026-09-06 para esto en concreto: dura un segundo, no tapa nada que haga
+   falta leer, y repetirla veinte veces al día no cansa.
+
+   No usa ninguna librería: son siete divs y una animación CSS. Añadir GSAP
+   para esto habría costado 70 KB al usuario por una animación de un segundo.
+   ============================================================================= */
+
+@keyframes banda-sale {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+@keyframes vista-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.transicion-bandas {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  pointer-events: none;
+}
+
+.transicion-bandas > i {
+  display: block;
+  background: linear-gradient(90deg, var(--color-sangre-700), var(--color-sangre-900));
+  transform-origin: right center;
+  animation: banda-sale 480ms cubic-bezier(.65, 0, .35, 1) forwards;
+}
+
+/* El escalonado: 45 ms entre banda y banda. Con las siete a la vez es un
+   parpadeo; escalonadas, el ojo las lee en orden. */
+.transicion-bandas > i:nth-child(1) { animation-delay:   0ms; }
+.transicion-bandas > i:nth-child(2) { animation-delay:  45ms; }
+.transicion-bandas > i:nth-child(3) { animation-delay:  90ms; }
+.transicion-bandas > i:nth-child(4) { animation-delay: 135ms; }
+.transicion-bandas > i:nth-child(5) { animation-delay: 180ms; }
+.transicion-bandas > i:nth-child(6) { animation-delay: 225ms; }
+.transicion-bandas > i:nth-child(7) { animation-delay: 270ms; }
+
+.vista-entrando {
+  animation: vista-entra 320ms cubic-bezier(.2, .8, .3, 1) both;
+}
+
+/* Quien pide reducir movimiento no ve ninguna: las bandas no se pintan y la
+   vista aparece sin más. */
+@media (prefers-reduced-motion: reduce) {
+  .transicion-bandas { display: none; }
+  .vista-entrando { animation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

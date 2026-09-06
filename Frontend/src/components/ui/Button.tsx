@@ -9,11 +9,18 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
+/**
+ * Los cuatro botones, con la paleta de `index.css`.
+ *
+ * `danger` usa `fallo` y NO `sangre`, aunque los dos sean rojos: el sangre es el color de
+ * la marca —está en el botón de Entrar, que es la acción más normal del mundo— y el fallo
+ * es un dato. Si compartieran color, «Entrar» y «Eliminar» se verían igual.
+ */
 const variantClass: Record<Variant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400',
-  secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400',
-  ghost: 'text-gray-600 hover:bg-gray-100',
+  primary: 'bg-sangre-600 text-oro-100 hover:bg-sangre-500 disabled:bg-sangre-400',
+  secondary: 'bg-tinta-50 text-tinta-700 border border-tinta-300 hover:bg-tinta-100',
+  danger: 'bg-fallo-500 text-white hover:bg-fallo-500/90 disabled:opacity-60',
+  ghost: 'text-tinta-600 hover:bg-tinta-200',
 };
 
 const sizeClass: Record<Size, string> = {
@@ -34,7 +41,9 @@ export function Button({
   return (
     <button
       disabled={disabled ?? loading}
-      className={`inline-flex items-center gap-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 disabled:cursor-not-allowed ${variantClass[variant]} ${sizeClass[size]} ${className}`}
+      // El píxel de subida es el de Alma. `transition-all` en vez de `transition-colors`
+      // porque ahora también se mueve; 120 ms, el tiempo rápido del tema.
+      className={`inline-flex items-center gap-2 rounded-lg font-medium transition-all duration-[120ms] hover:-translate-y-px active:translate-y-0 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${variantClass[variant]} ${sizeClass[size]} ${className}`}
       {...props}
     >
       {loading && (

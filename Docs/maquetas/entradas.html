@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy Test · cortinas de entrada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;0,6..96,800;1,6..96,400&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --sangre-hondo: #4A0A0E;
+    --sangre: #6B0F14;
+    --sangre-vivo: #8E1319;
+    --dorado: #C9A227;
+    --dorado-claro: #E3C567;
+    --ocre: #B07A2B;
+    --tinta: #1A1113;
+    --crema: #F5EFE6;
+    --papel: #FFFDF9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #120C0E; color: #EFE3D6;
+    font-family: Archivo, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .envoltura { max-width: 1200px; margin: 0 auto; padding: 44px 24px 80px; }
+
+  header { display: grid; gap: 14px; margin-bottom: 34px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--ocre); margin: 0;
+  }
+  h1 {
+    font-family: "Bodoni Moda", Georgia, serif; font-weight: 800;
+    font-size: clamp(36px, 5vw, 58px); line-height: 1; margin: 0; letter-spacing: -.015em;
+  }
+  h1 em { font-style: italic; font-weight: 400; color: var(--dorado); }
+  header p { margin: 0; max-width: 66ch; color: rgba(239,227,214,.62); font-size: 16px; }
+  header p b { color: #EFE3D6; font-weight: 600; }
+
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 34px 26px; }
+
+  .caso { display: grid; gap: 12px; align-content: start; }
+  .num {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .16em;
+    color: var(--ocre); margin: 0;
+  }
+  .caso h2 { font-family: "Bodoni Moda", Georgia, serif; font-size: 25px; font-weight: 600; margin: 0; }
+  .caso .desc { margin: 0; font-size: 14px; color: rgba(239,227,214,.6); }
+  .caso .pasos {
+    margin: 0; padding: 0; list-style: none;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    color: rgba(201,162,39,.75); display: grid; gap: 3px;
+  }
+
+  .escena {
+    position: relative; aspect-ratio: 4 / 3; overflow: hidden;
+    border: 1px solid rgba(201,162,39,.22); border-radius: 10px;
+    background: radial-gradient(120% 90% at 50% -20%, #5C0D12 0%, transparent 60%), var(--tinta);
+    display: grid; place-items: center;
+  }
+
+  /* Cortina */
+  .telon {
+    position: absolute; inset: 0; z-index: 5; display: grid; place-items: center;
+    background: #0C0709;
+  }
+  .sello-grande { width: 120px; height: 120px; }
+
+  /* Tarjeta de acceso */
+  .tarjeta {
+    position: relative; z-index: 2;
+    width: min(290px, 78%); display: grid; gap: 13px;
+    padding: 26px 24px; border: 1px solid rgba(201,162,39,.38);
+    border-radius: 3px; background: rgba(10,6,7,.62);
+  }
+  .tarjeta::before {
+    content: ""; position: absolute; inset: 5px;
+    border: 1px solid rgba(201,162,39,.14); border-radius: 2px; pointer-events: none;
+  }
+  .marca {
+    font-family: "Bodoni Moda", Georgia, serif; font-size: 28px; font-weight: 800;
+    color: var(--dorado-claro); text-align: center; line-height: 1;
+  }
+  .lema {
+    font-family: "IBM Plex Mono", monospace; font-size: 9px; letter-spacing: .2em;
+    text-transform: uppercase; color: rgba(224,196,140,.6); text-align: center; margin-top: -8px;
+  }
+  .campo { display: grid; gap: 4px; }
+  .campo label {
+    font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+    color: rgba(224,196,140,.78);
+  }
+  .campo input {
+    height: 32px; border-radius: 5px; padding: 0 10px; width: 100%; outline: none;
+    font-family: Archivo, sans-serif; font-size: 12px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(201,162,39,.24); color: #EFE3D6;
+    transition: border-color .18s, background .18s, box-shadow .18s;
+  }
+  .campo input::placeholder { color: rgba(239,227,214,.32); }
+  .campo input:focus {
+    border-color: rgba(201,162,39,.8);
+    box-shadow: 0 0 0 3px rgba(201,162,39,.14);
+    background: rgba(255,255,255,.07);
+  }
+  .boton {
+    height: 34px; border-radius: 5px; width: 100%; cursor: pointer;
+    border: 1px solid rgba(201,162,39,.55);
+    background: linear-gradient(180deg, var(--sangre-vivo), var(--sangre));
+    color: var(--dorado-claro);
+    font-family: Archivo, sans-serif; font-weight: 600; font-size: 13px;
+    display: grid; place-items: center;
+    transition: transform .12s ease, box-shadow .18s ease, filter .18s ease;
+  }
+  .boton:hover { transform: translateY(-1px); box-shadow: 0 5px 18px -6px rgba(201,162,39,.42); filter: brightness(1.08); }
+  .boton:active { transform: translateY(0); }
+  .pie { font-size: 11px; text-align: center; color: rgba(224,196,140,.5); }
+  .pie b { color: var(--dorado); }
+
+  /* Barrido de luz (caso 3) */
+  .barrido {
+    position: absolute; z-index: 4; top: 0; bottom: 0; width: 42%;
+    background: linear-gradient(90deg, transparent, rgba(227,197,103,.16) 45%, rgba(227,197,103,.5) 50%, rgba(227,197,103,.16) 55%, transparent);
+    pointer-events: none; opacity: 0;
+  }
+
+  .repetir {
+    justify-self: start;
+    display: inline-flex; align-items: center; gap: 7px;
+    background: transparent; color: var(--dorado);
+    border: 1px solid rgba(201,162,39,.4); border-radius: 4px;
+    padding: 7px 13px; cursor: pointer;
+    font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    letter-spacing: .1em; text-transform: uppercase;
+    transition: background .18s ease, border-color .18s ease, transform .12s ease;
+  }
+  .repetir:hover { background: rgba(201,162,39,.1); border-color: var(--dorado); transform: translateY(-1px); }
+  .repetir:focus-visible { outline: 2px solid var(--dorado-claro); outline-offset: 2px; }
+
+  .cierre {
+    margin-top: 52px; padding: 22px 24px;
+    border: 1px solid rgba(201,162,39,.22); border-left: 3px solid var(--sangre-vivo);
+    border-radius: 4px; background: rgba(255,255,255,.02);
+    max-width: 78ch; display: grid; gap: 9px;
+  }
+  .cierre h3 { font-family: "Bodoni Moda", Georgia, serif; font-size: 19px; margin: 0; font-weight: 600; }
+  .cierre p { margin: 0; font-size: 14.5px; color: rgba(239,227,214,.65); }
+  .cierre b { color: #EFE3D6; }
+  .cierre code {
+    font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+    background: rgba(201,162,39,.12); padding: 1px 5px; border-radius: 3px; color: var(--dorado-claro);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .telon { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <header>
+    <p class="eyebrow">Easy Test · identidad Cripta · cortinas de entrada</p>
+    <h1>Tres formas de <em>abrir</em></h1>
+    <p>
+      Las tres usan la misma secuencia que Alma —logo a pantalla completa que se contrae y
+      revela el formulario— con la paleta de sangre y oro. <b>Pulsa «Repetir» en cualquiera
+      para verla las veces que haga falta.</b> En la plataforma real se vería una vez por
+      pestaña, como en Alma.
+    </p>
+  </header>
+
+  <div class="rejilla">
+
+    <!-- ══════════ 1 · SELLO ══════════ -->
+    <section class="caso">
+      <p class="num">ENTRADA 01</p>
+      <h2>Sello</h2>
+      <p class="desc">La copia fiel de Alma: el monograma entra con rebote, se inclina, vuelve y se contrae hasta desaparecer.</p>
+      <ul class="pasos">
+        <li>0,70 s · entra con rebote — back.out</li>
+        <li>0,70 s · se inclina 6° y vuelve</li>
+        <li>0,75 s · se contrae a un tercio</li>
+        <li>0,70 s · la tarjeta sube 24 px</li>
+      </ul>
+      <div class="escena" id="escena1">
+        <div class="telon" data-telon>
+          <svg class="sello-grande" data-logo viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="21" stroke="#C9A227" stroke-width="1.4" opacity=".55"/>
+            <circle cx="24" cy="24" r="17" fill="#6B0F14"/>
+            <text x="24" y="31" text-anchor="middle" font-family="Bodoni Moda, Georgia, serif"
+                  font-size="20" font-weight="800" fill="#E3C567">E</text>
+          </svg>
+        </div>
+        <form class="tarjeta" data-tarjeta onsubmit="return false">
+          <div class="marca">Easy Test</div>
+          <div class="lema">Automatización de pruebas</div>
+          <div class="campo"><label>Email</label><input type="email" placeholder="tu@email.com" autocomplete="off"></div>
+          <div class="campo"><label>Contraseña</label><input type="password" placeholder="••••••••" autocomplete="off"></div>
+          <button class="boton" type="submit">Entrar</button>
+          <div class="pie">¿No tienes cuenta? <b>Registrarse</b></div>
+        </form>
+      </div>
+      <button class="repetir" data-repetir="1">Repetir</button>
+    </section>
+
+    <!-- ══════════ 2 · LACRE ══════════ -->
+    <section class="caso">
+      <p class="num">ENTRADA 02</p>
+      <h2>Lacre</h2>
+      <p class="desc">El sello cae de arriba y se aplasta al llegar, como el lacre sobre el papel. Más carácter, y un punto más lenta.</p>
+      <ul class="pasos">
+        <li>0,55 s · cae desde arriba — power4.in</li>
+        <li>0,25 s · se aplasta al impactar</li>
+        <li>0,35 s · recupera la forma</li>
+        <li>0,60 s · se funde y entra la tarjeta</li>
+      </ul>
+      <div class="escena" id="escena2">
+        <div class="telon" data-telon>
+          <svg class="sello-grande" data-logo viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="21" fill="#4A0A0E"/>
+            <circle cx="24" cy="24" r="21" stroke="#C9A227" stroke-width="1.2" opacity=".6"/>
+            <text x="24" y="32" text-anchor="middle" font-family="Bodoni Moda, Georgia, serif"
+                  font-size="22" font-weight="800" fill="#E3C567">E</text>
+          </svg>
+        </div>
+        <form class="tarjeta" data-tarjeta onsubmit="return false">
+          <div class="marca">Easy Test</div>
+          <div class="lema">Automatización de pruebas</div>
+          <div class="campo"><label>Email</label><input type="email" placeholder="tu@email.com" autocomplete="off"></div>
+          <div class="campo"><label>Contraseña</label><input type="password" placeholder="••••••••" autocomplete="off"></div>
+          <button class="boton" type="submit">Entrar</button>
+          <div class="pie">¿No tienes cuenta? <b>Registrarse</b></div>
+        </form>
+      </div>
+      <button class="repetir" data-repetir="2">Repetir</button>
+    </section>
+
+    <!-- ══════════ 3 · FILO ══════════ -->
+    <section class="caso">
+      <p class="num">ENTRADA 03</p>
+      <h2>Filo</h2>
+      <p class="desc">Sin logo gigante: una hoja de luz dorada cruza la pantalla y, a su paso, deja el formulario puesto. La más corta de las tres.</p>
+      <ul class="pasos">
+        <li>0,20 s · el telón se abre en dos</li>
+        <li>0,60 s · la luz cruza de lado a lado</li>
+        <li>0,50 s · la tarjeta aparece tras ella</li>
+        <li>— · sin rebotes ni giros</li>
+      </ul>
+      <div class="escena" id="escena3">
+        <div class="barrido" data-barrido></div>
+        <div class="telon" data-telon></div>
+        <form class="tarjeta" data-tarjeta onsubmit="return false">
+          <div class="marca">Easy Test</div>
+          <div class="lema">Automatización de pruebas</div>
+          <div class="campo"><label>Email</label><input type="email" placeholder="tu@email.com" autocomplete="off"></div>
+          <div class="campo"><label>Contraseña</label><input type="password" placeholder="••••••••" autocomplete="off"></div>
+          <button class="boton" type="submit">Entrar</button>
+          <div class="pie">¿No tienes cuenta? <b>Registrarse</b></div>
+        </form>
+      </div>
+      <button class="repetir" data-repetir="3">Repetir</button>
+    </section>
+
+  </div>
+
+  <section class="cierre">
+    <h3>Lo que hay debajo</h3>
+    <p>
+      Las tres corren con <b>GSAP</b>, la misma librería que usa Alma en su login, y con sus
+      mismas curvas: <code>back.out(1.6)</code> para el rebote, <code>power3.inOut</code> para
+      el resto.
+    </p>
+    <p>
+      Y con las mismas dos salvaguardas que tiene Alma: se ve <b>una vez por pestaña</b> —aquí
+      el botón «Repetir» hace de interruptor <code>INTRO_ALWAYS</code>— y si el sistema pide
+      <b>reducir movimiento</b>, la cortina no aparece: el formulario está ahí desde el primer
+      fotograma.
+    </p>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+  const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /** 01 · Sello — la secuencia de Alma, tal cual, con nuestro monograma. */
+  function entradaSello(escena) {
+    const telon = escena.querySelector('[data-telon]');
+    const logo = escena.querySelector('[data-logo]');
+    const tarjeta = escena.querySelector('[data-tarjeta]');
+
+    gsap.set(telon, { opacity: 1, display: 'grid' });
+    gsap.set(logo, { transformOrigin: 'center center', clearProps: 'transform' });
+
+    return gsap.timeline({ defaults: { ease: 'power3.inOut' } })
+      .from(logo, { scale: 0.75, opacity: 0, duration: 0.7, ease: 'back.out(1.6)' })
+      .to(logo, { rotate: 6, duration: 0.35, ease: 'sine.inOut' })
+      .to(logo, { rotate: 0, duration: 0.35, ease: 'sine.inOut' })
+      .to(logo, { scale: 0.3, duration: 0.75 }, '+=0.15')
+      .to(telon, { opacity: 0, duration: 0.55 }, '-=0.35')
+      .from(tarjeta, { opacity: 0, y: 24, duration: 0.7, ease: 'power3.out' }, '-=0.3')
+      .set(telon, { display: 'none' });
+  }
+
+  /** 02 · Lacre — cae y se aplasta, como el sello sobre el papel. */
+  function entradaLacre(escena) {
+    const telon = escena.querySelector('[data-telon]');
+    const logo = escena.querySelector('[data-logo]');
+    const tarjeta = escena.querySelector('[data-tarjeta]');
+
+    gsap.set(telon, { opacity: 1, display: 'grid' });
+    gsap.set(logo, { transformOrigin: 'center center', clearProps: 'transform' });
+
+    return gsap.timeline()
+      .from(logo, { y: -160, opacity: 0, duration: 0.55, ease: 'power4.in' })
+      .to(logo, { scaleX: 1.22, scaleY: 0.78, duration: 0.12, ease: 'power2.out' })
+      .to(logo, { scaleX: 1, scaleY: 1, duration: 0.35, ease: 'elastic.out(1, 0.45)' })
+      .to(logo, { scale: 0.34, opacity: 0.85, duration: 0.5, ease: 'power3.inOut' }, '+=0.2')
+      .to(telon, { opacity: 0, duration: 0.6, ease: 'power2.inOut' }, '-=0.3')
+      .from(tarjeta, { opacity: 0, y: 20, duration: 0.6, ease: 'power3.out' }, '-=0.35')
+      .set(telon, { display: 'none' });
+  }
+
+  /** 03 · Filo — una hoja de luz cruza y deja el formulario puesto. */
+  function entradaFilo(escena) {
+    const telon = escena.querySelector('[data-telon]');
+    const barrido = escena.querySelector('[data-barrido]');
+    const tarjeta = escena.querySelector('[data-tarjeta]');
+
+    gsap.set(telon, { opacity: 1, display: 'block' });
+    gsap.set(barrido, { opacity: 0, xPercent: -140 });
+
+    return gsap.timeline({ defaults: { ease: 'power2.inOut' } })
+      .to(telon, { opacity: 0, duration: 0.2 })
+      .set(telon, { display: 'none' })
+      .to(barrido, { opacity: 1, duration: 0.12 }, '<')
+      .fromTo(barrido, { xPercent: -140 }, { xPercent: 320, duration: 0.6, ease: 'power2.inOut' }, '<')
+      .to(barrido, { opacity: 0, duration: 0.2 }, '-=0.18')
+      .from(tarjeta, { opacity: 0, duration: 0.5, ease: 'power2.out' }, '-=0.42');
+  }
+
+  const entradas = {
+    '1': () => entradaSello(document.getElementById('escena1')),
+    '2': () => entradaLacre(document.getElementById('escena2')),
+    '3': () => entradaFilo(document.getElementById('escena3')),
+  };
+
+  document.querySelectorAll('[data-repetir]').forEach((boton) => {
+    boton.addEventListener('click', () => entradas[boton.dataset.repetir]());
+  });
+
+  // Al abrir la página se reproducen las tres, escalonadas, para poder compararlas.
+  // Si el sistema pide reducir movimiento, no se reproduce ninguna: los telones se apartan.
+  if (reducido) {
+    document.querySelectorAll('[data-telon]').forEach((t) => (t.style.display = 'none'));
+  } else {
+    entradas['1']();
+    setTimeout(() => entradas['2'](), 700);
+    setTimeout(() => entradas['3'](), 1400);
+  }
+</script>
+</body>
+</html>

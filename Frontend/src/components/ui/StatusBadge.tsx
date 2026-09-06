@@ -2,32 +2,72 @@ import type { ExecutionStatus, TestStatus, HealingStatus } from '@/types/models'
 
 type Status = ExecutionStatus | TestStatus | HealingStatus | string;
 
+/**
+ * Cómo se lee cada estado.
+ *
+ * Antes se mostraba el valor de la base tal cual: `COMPLETED`, `FAILED`, `PENDING_APPROVAL`.
+ * Eso es el nombre técnico del dato, no una palabra: quien no programa —que es para quien
+ * existe esta herramienta— no tiene por qué saber inglés ni leer MAYÚSCULAS_CON_GUIONES.
+ *
+ * Se traduce solo lo que se ENSEÑA. El valor sigue siendo el de la base en todas partes.
+ */
+const texto: Record<string, string> = {
+  QUEUED: 'En cola',
+  PROVISIONING: 'Preparando',
+  RUNNING: 'Ejecutando',
+  COLLECTING: 'Recogiendo',
+  COMPLETED: 'Terminada',
+  CANCELLED: 'Cancelada',
+  PASSED: 'Pasó',
+  FAILED: 'Falló',
+  SKIPPED: 'Omitido',
+  DRAFT: 'Borrador',
+  ACTIVE: 'Activa',
+  ARCHIVED: 'Archivada',
+  PENDING_APPROVAL: 'Pendiente de aprobar',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+  SUPERSEDED: 'Reemplazada',
+};
+
+/**
+ * El color de cada estado, con la paleta semántica de `index.css`.
+ *
+ * Los estados usan `paso` / `fallo` / `espera`, NUNCA los colores de marca. En una
+ * herramienta de pruebas el color de un estado es un dato que se lee de un vistazo desde
+ * dos metros: si compartiera color con la marca, el día que cambie la marca cambiaría el
+ * significado de la pantalla.
+ */
 const colorMap: Record<string, string> = {
-  QUEUED: 'bg-gray-100 text-gray-700',
-  PROVISIONING: 'bg-blue-100 text-blue-700',
-  RUNNING: 'bg-yellow-100 text-yellow-700',
-  COLLECTING: 'bg-purple-100 text-purple-700',
-  COMPLETED: 'bg-emerald-100 text-emerald-700',
-  PASSED: 'bg-emerald-100 text-emerald-700',
-  FAILED: 'bg-red-100 text-red-700',
-  CANCELLED: 'bg-gray-100 text-gray-500',
-  DRAFT: 'bg-gray-100 text-gray-600',
-  ACTIVE: 'bg-emerald-100 text-emerald-700',
-  ARCHIVED: 'bg-gray-100 text-gray-400',
-  PENDING_APPROVAL: 'bg-yellow-100 text-yellow-700',
-  APPROVED: 'bg-emerald-100 text-emerald-700',
-  REJECTED: 'bg-red-100 text-red-700',
-  SUPERSEDED: 'bg-gray-100 text-gray-500',
-  SKIPPED: 'bg-gray-100 text-gray-500',
+  QUEUED: 'bg-omitido-100 text-omitido-500',
+  PROVISIONING: 'bg-espera-100 text-espera-500',
+  RUNNING: 'bg-espera-100 text-espera-500',
+  COLLECTING: 'bg-espera-100 text-espera-500',
+  COMPLETED: 'bg-paso-100 text-paso-500',
+  PASSED: 'bg-paso-100 text-paso-500',
+  FAILED: 'bg-fallo-100 text-fallo-500',
+  CANCELLED: 'bg-omitido-100 text-omitido-500',
+  DRAFT: 'bg-tinta-200 text-tinta-600',
+  ACTIVE: 'bg-paso-100 text-paso-500',
+  ARCHIVED: 'bg-tinta-200 text-tinta-500',
+  PENDING_APPROVAL: 'bg-espera-100 text-espera-500',
+  APPROVED: 'bg-paso-100 text-paso-500',
+  REJECTED: 'bg-fallo-100 text-fallo-500',
+  SUPERSEDED: 'bg-omitido-100 text-omitido-500',
+  SKIPPED: 'bg-omitido-100 text-omitido-500',
 };
 
 export function StatusBadge({ status }: { status: Status }) {
-  const cls = colorMap[status] ?? 'bg-gray-100 text-gray-600';
+  const cls = colorMap[status] ?? 'bg-tinta-200 text-tinta-600';
+  // Un estado que no conocemos se enseña tal cual: inventarle una traducción sería peor
+  // que mostrar el valor crudo, porque nadie podría buscarlo después.
+  const leyenda = texto[status] ?? status;
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+      title={leyenda === status ? undefined : status}
     >
-      {status}
+      {leyenda}
     </span>
   );
 }
