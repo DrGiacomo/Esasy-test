@@ -17,13 +17,20 @@ RUN npm ci
 
 COPY . .
 
-# Las dos van VACIAS a proposito, y esto no es un descuido:
-#   VITE_API_URL   vacia -> el cliente pide a `/api/v1`, misma direccion que la pagina,
-#                           y nginx lo reenvia al backend. Sin CORS y sin puertos a mano.
-#   VITE_WS_URL    vacia -> socket.io se conecta al mismo origen, y nginx lo reenvia.
-# Si se pusieran a `http://localhost:3000`, la imagen solo serviria en la maquina de quien
-# la construyo: en cualquier otra, el navegador buscaria el backend en SU propio localhost.
-ENV VITE_API_URL=""
+# Las dos son RELATIVAS a proposito: la pagina pide a su propia direccion y nginx lo
+# reenvia al backend. Sin CORS y sin puertos escritos a mano. Si se pusieran a
+# `http://localhost:3000`, la imagen solo serviria en la maquina de quien la construyo:
+# en cualquier otra, el navegador buscaria el backend en SU propio localhost.
+#
+#   VITE_API_URL debe llevar la ruta ENTERA, no ir vacia. El cliente hace
+#       import.meta.env.VITE_API_URL ?? '/api/v1'
+#   y `??` solo salta cuando el valor es NULO: una cadena vacia le vale, asi que con ""
+#   el prefijo /api/v1 desaparecia y la aplicacion pedia a /auth/login. nginx lo tomaba
+#   por una ruta de la pagina y respondia 405 a los POST. Verificado el 2026-09-05: con
+#   curl a mano parecia funcionar, porque curl no usa esta variable.
+ENV VITE_API_URL="/api/v1"
+# Esta si va vacia: el cliente hace `${WS_URL}${namespace}`, y con "" queda
+# "/executions", que socket.io resuelve contra el mismo origen. Es lo que se busca.
 ENV VITE_WS_URL=""
 RUN npm run build
 

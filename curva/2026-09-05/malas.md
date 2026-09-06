@@ -192,3 +192,53 @@ después. Y hay una segunda mitad de la lección, más incómoda: **el script ya
 en un comentario** —«por puerto y no por taskkill node.exe: eso mataría cualquier otro Node
 que tengas abierto»—. Sabía que matar a ciegas era peligroso, protegió el caso que imaginó su
 autor y no el que llegó. Es `S12` en estado puro.
+
+---
+
+## 10. Di por bueno un arranque que no funcionaba, porque lo probe con el instrumento equivocado
+
+> **Rompe `I3`** —*lo que entra y lo que consulta pasan por exactamente el mismo pipeline*—
+> y es la sexta vez del §1 en la que **una medida aprueba mientras el resultado real
+> empeora**.
+
+**Qué pasó.** Se declaró el arranque unificado verificado, con esta tabla:
+
+| Comprobación | Resultado |
+|---|---|
+| `POST /api/v1/auth/login` por el 8080 | `HTTP 200` |
+| `GET /api/v1/projects` | `HTTP 200` |
+
+**Todo cierto, y la plataforma estaba rota.** El usuario abrió la pantalla, pulsó Entrar y le
+salió *«Request failed with status code 405»*.
+
+**Causa técnica.** En el Dockerfile del frontend se puso `ENV VITE_API_URL=""` creyendo que
+el cliente caería en su valor por defecto. Pero el cliente hace:
+
+```ts
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
+```
+
+y `??` **solo salta cuando el valor es nulo**: una cadena vacía le vale. Así que el prefijo
+desapareció y la aplicación pedía a `/auth/login`. nginx lo tomaba por una ruta de la página,
+intentaba servir un archivo con un `POST` y respondía `405`.
+
+**Causa de método, que es la que importa.** Las comprobaciones se hicieron con `curl`
+**escribiendo la ruta completa a mano**. `curl` no lee `VITE_API_URL`; la aplicación sí. Se
+midió un camino que ningún usuario recorre, y por eso el examen salió en verde con el
+producto roto.
+
+**Lección.** *Un cliente de prueba que construye la petición a mano no prueba al cliente
+real: prueba al que la escribe.* Cuando lo que se valida es «¿funciona la aplicación?», la
+petición tiene que salir **de la aplicación** — desde el navegador, con su propio paquete
+compilado. Ahora se comprueba así:
+
+```
+grep "/api/v1" en el JS que sirve nginx      -> aparece
+fetch desde la pagina con datos falsos       -> 401 (llega al backend)
+POST a /auth/login, la ruta rota de antes    -> 405 (el error reproducido)
+```
+
+**Y el agravante:** la respuesta al usuario llevaba una tabla de cinco filas en verde y la
+frase «Funcionando». `E8` avisa de esto —*el entusiasmo se comunica igual de rápido que un
+resultado y se corrige mucho más despacio*—. El fallo no fue el `""`: fue **firmar un
+resultado con un examen que no examinaba lo que decía**.
