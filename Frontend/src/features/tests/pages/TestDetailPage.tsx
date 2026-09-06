@@ -58,6 +58,24 @@ export default function TestDetailPage() {
     }
   }
 
+  /**
+   * Cambia el estado de la prueba. El `onChange` de antes era `async` sin `catch`: si la
+   * llamada fallaba, el desplegable se quedaba mostrando el valor nuevo y la prueba seguia
+   * como estaba. El usuario creia haberla activado y no lo habia hecho.
+   */
+  async function cambiarEstado(nuevo: string) {
+    if (!test) return;
+    const anterior = test.status;
+    setTest((prev) => (prev ? { ...prev, status: nuevo as typeof prev.status } : prev));
+    try {
+      const actualizado = await testsApi.update(test.id, { status: nuevo });
+      setTest((prev) => (prev ? { ...prev, status: actualizado.status } : prev));
+    } catch (err) {
+      setTest((prev) => (prev ? { ...prev, status: anterior } : prev));
+      alert(`No se pudo cambiar el estado: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   if (loading)
     return (
       <div className="flex justify-center py-12">
@@ -74,16 +92,19 @@ export default function TestDetailPage() {
           <p className="mt-1 text-sm text-gray-500">{test.description}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/*
+            En cristiano y no en ingles: «DRAFT» no le dice nada a quien no programa, y el
+            estado decide si la prueba se ejecuta o no. ARCHIVED entra en la lista porque
+            existe en la base: sin el, una prueba archivada no se podia recuperar desde aqui.
+          */}
           <select
             value={test.status}
-            onChange={async (e) => {
-              const updated = await testsApi.update(test.id, { status: e.target.value });
-              setTest((prev) => (prev ? { ...prev, status: updated.status } : prev));
-            }}
+            onChange={(e) => void cambiarEstado(e.target.value)}
             className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium focus:outline-none focus:border-indigo-500"
           >
-            <option value="DRAFT">DRAFT</option>
-            <option value="ACTIVE">ACTIVE</option>
+            <option value="DRAFT">Borrador</option>
+            <option value="ACTIVE">Activa</option>
+            <option value="ARCHIVED">Archivada</option>
           </select>
           <Link to={ROUTES.FLOW_EDITOR(test.id)}>
             <Button variant="secondary" size="sm">
@@ -97,6 +118,37 @@ export default function TestDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/*
+        Una prueba recien convertida desde una grabacion nace en borrador, y las pruebas en
+        borrador NO se ejecutan. Sin este aviso, el usuario le daba a Ejecutar y no pasaba
+        nada que el pudiera entender. El boton de activar va aqui mismo: decirle que le falta
+        un paso sin darselo hecho es la mitad del trabajo.
+      */}
+      {test.status === 'DRAFT' && (
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="text-sm text-amber-900">
+            <p className="font-semibold">Esta prueba está en borrador y no se ejecutará.</p>
+            <p className="mt-1 text-amber-800">
+              Las pruebas en borrador se quedan fuera de las ejecuciones para que algo a medio
+              hacer no dé falsas alarmas. Actívala cuando la des por buena.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => void cambiarEstado('ACTIVE')}>
+            Activar
+          </Button>
+        </div>
+      )}
+
+      {test.status === 'ARCHIVED' && (
+        <div className="mb-4 rounded-xl border border-gray-300 bg-gray-50 p-4 text-sm text-gray-700">
+          <p className="font-semibold">Esta prueba está archivada y no se ejecutará.</p>
+          <p className="mt-1">
+            Se conserva por si hace falta, pero queda fuera de las ejecuciones. Cámbiala a
+            «Activa» arriba para volver a usarla.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-4 text-sm font-semibold text-gray-700">Pasos ({test.steps.length})</h2>
