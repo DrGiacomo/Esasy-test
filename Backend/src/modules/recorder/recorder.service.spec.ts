@@ -227,3 +227,45 @@ describe('convertToTest — la prueba empieza yendo a donde se grabó', () => {
     expect(creados[0][0].data.value).toBe('/panel');
   });
 });
+
+/**
+ * Una descripción de paso no puede enseñar un selector: quien la lee no programa (`P3`). La
+ * grabación real de `www.frivclassic.com` produjo «Pulsar #flashObject», y eso contradecía
+ * lo que la Fase 4 dio por verificado midiéndolo con datos sembrados por nosotros.
+ */
+describe('cómo se nombra un elemento en la descripción', () => {
+  function nombrarDesde(step: Record<string, unknown>): string {
+    const { service } = build();
+    const privado = service as unknown as {
+      toTestStep(s: unknown): { description: string };
+    };
+    return privado.toTestStep({ type: 'click', ...step }).description;
+  }
+
+  it('usa la etiqueta del elemento cuando la hay', () => {
+    expect(nombrarDesde({ label: 'Entrar', selector: '#btn' })).toBe('Pulsar «Entrar»');
+  });
+
+  it('traduce un id a lenguaje llano en vez de escupirlo', () => {
+    const d = nombrarDesde({ selector: '#flashObject' });
+    expect(d).not.toContain('#');
+    expect(d).toBe('Pulsar el elemento «flash object»');
+  });
+
+  it('traduce los atributos más comunes', () => {
+    expect(nombrarDesde({ selector: '[name="email"]' })).toBe('Pulsar el campo «email»');
+    expect(nombrarDesde({ selector: '[aria-label="Cerrar"]' })).toBe('Pulsar «Cerrar»');
+    expect(nombrarDesde({ selector: '[data-testid="guardar"]' })).toBe('Pulsar «guardar»');
+  });
+
+  it('reconoce el tipo de elemento cuando no hay nada mejor', () => {
+    expect(nombrarDesde({ selector: 'button.primario' })).toBe('Pulsar el boton');
+    expect(nombrarDesde({ selector: 'a' })).toBe('Pulsar el enlace');
+  });
+
+  it('nunca deja pasar un selector crudo, aunque no sepa traducirlo', () => {
+    const d = nombrarDesde({ selector: 'div > .x:nth-child(3)' });
+    expect(d).not.toContain('nth-child');
+    expect(d).toBe('Pulsar el elemento');
+  });
+});

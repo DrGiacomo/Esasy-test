@@ -80,6 +80,76 @@ function resolverDestino(destino, baseUrl) {
   }
 }
 
+/**
+ * Cuanto se espera a que un elemento aparezca, en milisegundos.
+ *
+ * Estaba clavado a 30000 en cada `page.goto`. Una ejecucion que falla por un elemento que
+ * no esta se lleva medio minuto entero esperandolo, y con varios pasos asi la espera se
+ * multiplica: la primera grabacion real que fallo tardo 36 s, de los cuales 30 eran esto.
+ * Treinta segundos es sensato para una web lenta y demasiado para saber que algo no esta;
+ * ahora al menos se puede ajustar sin tocar el codigo.
+ */
+const ESPERA_MS = Number(process.env.STEP_TIMEOUT_MS) || 30000;
+
+/** Las comprobaciones esperan menos: si algo tiene que estar visible, o esta o no esta. */
+const ESPERA_ASERCION_MS = Number(process.env.ASSERT_TIMEOUT_MS) || 10000;
+
+/**
+ * Traduce el error de Playwright a algo que una persona entienda.
+ *
+ * Lo que veia el usuario hasta el 2026-09-06, tal cual y en ingles:
+ *
+ *   TimeoutError: page.click: Timeout 30000ms exceeded.
+ *   Call log: - waiting for locator('#flashObject')
+ *
+ * Delante de un QA que no programa, eso no es un diagnostico: es ruido. El texto tecnico NO
+ * se pierde — sigue guardandose en `errorDetails` del paso, que la pantalla ensena en «ver
+ * detalle tecnico». Aqui solo se decide QUE se lee primero.
+ */
+function explicarError(err, step) {
+  const texto = String(err);
+  const segundos = Math.round(ESPERA_MS / 1000);
+  // La descripcion se CITA, no se mete como sujeto de la frase: ya trae su verbo dentro
+  // («Pulsar el elemento...»), y encajarla dentro producia «No se encontro Pulsar el
+  // elemento...». Se cita entre comillas y la frase se construye alrededor.
+  const elPaso = step?.description ? `El paso «${step.description}»` : 'El paso';
+
+  if (/Timeout.*exceeded|TimeoutError/i.test(texto)) {
+    if (/goto|navigat/i.test(texto)) {
+      return (
+        `La pagina tardo mas de ${segundos} segundos en cargar y se dejo de esperar. ` +
+        `Puede que la direccion no responda o que la red vaya lenta.`
+      );
+    }
+    return (
+      `${elPaso} no se pudo hacer: el elemento no aparecio en la pagina despues de ` +
+      `${segundos} segundos. Puede que haya cambiado, que tarde mas en aparecer, o que la ` +
+      `pagina anterior no llegara a cargar.`
+    );
+  }
+
+  if (/net::ERR_NAME_NOT_RESOLVED|ENOTFOUND/i.test(texto)) {
+    return 'No se pudo resolver la direccion. Comprueba que la URL esta bien escrita.';
+  }
+  if (/net::ERR_CONNECTION_REFUSED|ECONNREFUSED/i.test(texto)) {
+    return 'La direccion existe pero nadie contesta. Puede que el servidor este apagado.';
+  }
+  if (/net::ERR_CERT|SSL/i.test(texto)) {
+    return 'El certificado de seguridad del sitio no es valido.';
+  }
+  if (/assert_text failed: expected "([^"]*)" but got "([^"]*)"/i.test(texto)) {
+    const m = /expected "([^"]*)" but got "([^"]*)"/i.exec(texto);
+    return `Se esperaba encontrar «${m[1]}» y en su lugar habia «${m[2]}».`;
+  }
+  if (/is not visible|not visible/i.test(texto)) {
+    return `${elPaso} no se pudo hacer: el elemento existe en la pagina pero no se ve.`;
+  }
+
+  // Lo que no se sabe traducir se devuelve tal cual: inventar una explicacion seria peor
+  // que ensenar la tecnica (`P5` — ante la duda, no adornar).
+  return texto;
+}
+
 async function runStep(page, step, baseUrl) {
   const action = step.action;
   const selector = resolveSecrets(step.selector);
@@ -88,7 +158,7 @@ async function runStep(page, step, baseUrl) {
   switch (action) {
     case 'navigate': {
       const destino = resolverDestino(value || selector, baseUrl);
-      await page.goto(destino, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto(destino, { waitUntil: 'domcontentloaded', timeout: ESPERA_MS });
       break;
     }
 
@@ -139,14 +209,14 @@ async function runStep(page, step, baseUrl) {
       break;
 
     case 'assert_visible':
-      await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
+      await page.waitForSelector(selector, { state: 'visible', timeout: ESPERA_ASERCION_MS });
       break;
 
     // `assert` genérico (lo emite la IA nl-to-flow): si hay `value` compara texto,
     // si no equivale a assert_visible. Comparte la lógica con assert_text.
     case 'assert':
     case 'assert_text': {
-      await page.waitForSelector(selector, { state: 'visible', timeout: 10000 });
+      await page.waitForSelector(selector, { state: 'visible', timeout: ESPERA_ASERCION_MS });
       const actual = (await page.textContent(selector)) ?? '';
       if (value != null && value !== '' && !actual.includes(value)) {
         throw new Error(
@@ -183,6 +253,7 @@ async function runTest(browser, db, redis, row) {
   const startTime = Date.now();
   let status = 'COMPLETED';
   let errorMessage = null;
+  let errorTecnico = null;
   let failedStepId = null;
 
   const contextOptions = RECORD_VIDEO
@@ -210,6 +281,12 @@ async function runTest(browser, db, redis, row) {
       .then(() => true)
       .catch((err) => { console.warn(`[executor] tracing no disponible: ${err}`); return false; });
 
+    // El tiempo de espera por defecto de TODAS las acciones (click, fill, press...). Sin
+    // esta linea, Playwright usa su propio valor de 30 s y no habia forma de cambiarlo: el
+    // «Timeout 30000ms exceeded» que veia el usuario no salia de ninguna linea del codigo,
+    // por eso no se encontraba buscando "30000".
+    context.setDefaultTimeout(ESPERA_MS);
+
     const tPagina = Date.now();
     page = await context.newPage();
     console.log(`[executor][tiempo] pagina abierta: ${Date.now() - tPagina} ms`);
@@ -233,8 +310,11 @@ async function runTest(browser, db, redis, row) {
 
   } catch (err) {
     status = 'FAILED';
-    errorMessage = String(err);
-    console.error(`[executor] Test "${test_name}" FAILED: ${err}`);
+    // Dos mensajes a proposito: el humano es el que se lee primero, el tecnico se guarda
+    // entero en el paso para quien lo necesite.
+    errorTecnico = String(err);
+    errorMessage = explicarError(err, activeSteps[failedIndex]);
+    console.error(`[executor] Test "${test_name}" FAILED: ${errorTecnico}`);
 
     // Capturar el contexto del fallo (HTML + screenshot) para alimentar el self-healing
     // automático del backend. Best-effort y con timeout: nunca debe colgar el test.
@@ -248,7 +328,7 @@ async function runTest(browser, db, redis, row) {
       // instantaneo — justo el que interesa cronometrar. Hallazgo BAJO del audit
       // 2026-07-12, cerrado el 2026-09-04.
       const failedDuration = failedStepStart !== null ? Date.now() - failedStepStart : 0;
-      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: failedDuration, errorDetails: errorMessage, screenshotUrl: failureScreenshotUrl });
+      stepResults.push({ stepId: failedStepId, status: 'FAILED', durationMs: failedDuration, errorDetails: errorTecnico, screenshotUrl: failureScreenshotUrl });
     }
 
     await publish(redis, 'result:step-failed', { testId: test_id, stepId: failedStepId }).catch(() => null);

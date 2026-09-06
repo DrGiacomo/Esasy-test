@@ -101,6 +101,11 @@ services:
       # `traceUrl` se quedaba en null. Nada fallaba; solo desaparecia el resultado.
       ARTIFACTS_MOUNT: easytest_artifacts
       ARTIFACTS_VOLUME_PATH: /artifacts
+      # Cuanto espera cada paso a que aparezca un elemento antes de rendirse. Se puede bajar
+      # para que un fallo se sepa antes: una ejecucion que falla por un elemento que no esta
+      # se lleva este tiempo entero esperandolo, por paso.
+      STEP_TIMEOUT_MS: "${STEP_TIMEOUT_MS:-30000}"
+      ASSERT_TIMEOUT_MS: "${ASSERT_TIMEOUT_MS:-10000}"
     depends_on:
       postgres:
         condition: service_healthy

@@ -246,9 +246,70 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
    * Recae en el selector solo cuando el recorder no pudo sacar etiqueta — es preferible
    * una descripcion tecnica a una vacia, y el modo sencillo la ensena igual.
    */
+  /**
+   * Traduce un selector a algo que una persona pueda leer.
+   *
+   * Los selectores dicen `[name="email"]` o `#flashObject`; la descripcion de un paso tiene
+   * que decir «el campo «email»». No se pierde nada: el selector exacto sigue en su columna
+   * y la pantalla lo ensena en «ver detalle tecnico».
+   *
+   * Devuelve `null` cuando no puede sacar nada legible, para que quien llama decida.
+   */
+  private traducirSelector(selector: string): string | null {
+    const comillas = (t: string) => `\u00ab${t}\u00bb`;
+
+    // [name="email"] · [placeholder="Buscar"] · [aria-label="Cerrar"] · [data-testid="x"]
+    const atributo =
+      /\[(name|placeholder|aria-label|title|alt|data-testid)=["']([^"']+)["']\]/.exec(selector);
+    if (atributo) {
+      const clave = atributo[1];
+      const valor = atributo[2];
+      if (clave === 'name' || clave === 'placeholder') return `el campo ${comillas(valor)}`;
+      return comillas(valor);
+    }
+
+    // #identificador — lo mas comun cuando el elemento no tiene texto visible
+    const id = /^#([A-Za-z][\w-]*)$/.exec(selector);
+    if (id) return `el elemento ${comillas(this.separarPalabras(id[1]))}`;
+
+    // button · a · input, con o sin clases detras
+    const etiqueta = /^([a-z]+)(?:[.#[]|$)/.exec(selector);
+    const porEtiqueta: Record<string, string> = {
+      button: 'el boton',
+      a: 'el enlace',
+      input: 'el campo',
+      select: 'la lista desplegable',
+      textarea: 'el area de texto',
+    };
+    if (etiqueta && porEtiqueta[etiqueta[1]]) return porEtiqueta[etiqueta[1]];
+
+    return null;
+  }
+
+  /** `flashObject` -> `flash object`; `play_button` -> `play button`. */
+  private separarPalabras(texto: string): string {
+    return texto
+      .replace(/[_-]+/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .toLowerCase()
+      .trim();
+  }
+
+  /**
+   * Como se llama a un elemento dentro de la descripcion de un paso.
+   *
+   * El ultimo recurso NO es el selector: es «el elemento». Hasta el 2026-09-06 el segundo
+   * escalon devolvia el selector en crudo, y una grabacion real de `www.frivclassic.com`
+   * produjo pasos que decian «Pulsar #flashObject». Eso viola `P3` de la biblia —lo basico
+   * no exige programar— y contradice lo que la Fase 4 dio por verificado («0 de 5
+   * descripciones filtran un selector»), que se midio con datos sembrados por nosotros.
+   */
   private nombrar(step: CapturedStep): string {
     if (step.label) return `\u00ab${step.label}\u00bb`;
-    if (step.selector) return step.selector;
+    if (step.selector) {
+      const legible = this.traducirSelector(step.selector);
+      if (legible) return legible;
+    }
     if (step.x !== undefined && step.y !== undefined) return `la posicion (${step.x}, ${step.y})`;
     return 'el elemento';
   }

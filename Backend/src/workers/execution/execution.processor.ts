@@ -33,6 +33,8 @@ const RESERVED_ENV = new Set([
   'DATABASE_URL',
   'RECORD_VIDEO',
   'MAX_PARALLEL',
+  'STEP_TIMEOUT_MS',
+  'ASSERT_TIMEOUT_MS',
   'PATH',
   'HOME',
   'NODE_OPTIONS',
@@ -109,6 +111,12 @@ export class ExecutionProcessor extends WorkerHost {
         `DATABASE_URL=${process.env.CONTAINER_DATABASE_URL ?? process.env.DATABASE_URL}`,
         `RECORD_VIDEO=${project?.recordVideo === false ? 'false' : 'true'}`,
         ...(project?.maxParallel != null ? [`MAX_PARALLEL=${project.maxParallel}`] : []),
+        // Cuanto espera cada paso a que aparezca un elemento. Si no se define, el executor
+        // usa 30 s. Se propaga desde aqui para poder bajarlo sin reconstruir la imagen.
+        ...(process.env.STEP_TIMEOUT_MS ? [`STEP_TIMEOUT_MS=${process.env.STEP_TIMEOUT_MS}`] : []),
+        ...(process.env.ASSERT_TIMEOUT_MS
+          ? [`ASSERT_TIMEOUT_MS=${process.env.ASSERT_TIMEOUT_MS}`]
+          : []),
         ...secretEnvVars,
       ];
 
