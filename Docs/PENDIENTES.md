@@ -147,6 +147,35 @@ de entrada.
 
 ---
 
+## 8. La URL del proyecto no llega a ningún sitio — hallazgo del `2026-09-05`
+
+**De dónde sale:** al usar la plataforma se preguntó por qué la URL se pide **dos veces**, al
+crear el proyecto y otra vez al grabar. Al mirarlo, la razón es peor que la duplicación.
+
+| Qué se pide | Para qué sirve HOY |
+|---|---|
+| `Project.baseUrl` — al crear el proyecto | **Solo la lee la IA**, para documentar y para generar flujos en lenguaje natural |
+| URL de la grabación — al empezar a grabar | La que abre el navegador. Se guarda como primer paso (`Ir a …`) y es la que reproduce el ejecutor |
+
+**El ejecutor no usa `baseUrl` en ningún sitio.** Cada paso lleva la dirección entera escrita
+dentro.
+
+| # | Pendiente | Prioridad | Estado | Notas |
+|---|---|---|---|---|
+| 8.1 | **Que la URL del proyecto llegue al grabador** — al elegir proyecto, rellenar el campo con su `baseUrl`, editable | 🟡 | ABIERTO | Barato: `RecorderPage.tsx` **ya tiene el selector de proyecto** (línea 15) justo encima del campo, que arranca vacío (línea 14). Es unir dos cosas que ya están |
+| 8.2 | **Guardar los pasos relativos a `baseUrl`**, no con la dirección completa | 🟠 | ABIERTO | Lo que de verdad resuelve el problema. Depende de decidir qué pasa con los tests que ya existen |
+
+**La consecuencia medible de 8.2, que es la que duele:** si la aplicación cambia de dirección
+—de `pruebas.empresa.com` a `nuevo.empresa.com`, o al pasar de un entorno a otro— hay que
+**editar test por test**, aunque el proyecto tenga su URL bien puesta. Con los datos de hoy en
+la base: **34 pruebas** que habría que tocar a mano.
+
+**Por qué 8.1 no basta solo:** prellenar el campo ahorra un copiar-pegar, pero el paso que se
+guarda sigue llevando la dirección entera dentro. Es la mitad cómoda; `8.2` es la mitad útil.
+Se anotan las dos por separado para que no se dé por resuelto el problema al hacer la fácil.
+
+---
+
 ### Mejoras futuras (no bloqueantes, fuera del roadmap original)
 - Self-healing con video (no solo screenshot) — fase 2 de la visión multimodal.
 - Documentación automática de tests (`documentation.service`) y métricas de coste IA.
