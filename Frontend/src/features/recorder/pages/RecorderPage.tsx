@@ -14,7 +14,21 @@ export default function RecorderPage() {
   const [targetUrl, setTargetUrl] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [starting, setStopping] = useState(false);
+  // Si el usuario ha escrito su propia URL, elegir otro proyecto NO se la pisa. Perder
+  // lo que alguien acaba de teclear es peor que ahorrarle el copiar-pegar.
+  const [urlEditadaAMano, setUrlEditadaAMano] = useState(false);
   const { projects, loading: loadingProjects } = useProjects();
+
+  /**
+   * Al elegir proyecto se rellena la URL con la suya. La plataforma ya sabía cuál era
+   * -está en el proyecto desde que se creó- y aun así obligaba a escribirla otra vez.
+   */
+  function elegirProyecto(projectId: string) {
+    setSelectedProjectId(projectId);
+    if (urlEditadaAMano) return;
+    const proyecto = projects.find((p) => p.id === projectId);
+    setTargetUrl(proyecto?.baseUrl ?? '');
+  }
 
   const { frame, capturedSteps, connected, performAction } = useRecorderSocket(
     session?.sessionId ?? null,
@@ -56,13 +70,14 @@ export default function RecorderPage() {
         <div className="w-full max-w-md space-y-4">
           <h1 className="text-xl font-bold text-gray-900 text-center">Grabador de pruebas</h1>
           <p className="text-sm text-gray-500 text-center">
-            Ingresa la URL de la aplicación que quieres grabar. El navegador remoto se abrirá y tus
-            acciones se convertirán en pasos de prueba automáticamente.
+            Elige el proyecto y se rellenará su dirección. Puedes cambiarla para grabar una
+            parte concreta. El navegador remoto se abrirá y tus acciones se convertirán en
+            pasos de prueba automáticamente.
           </p>
           <div className="space-y-3">
             <select
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => elegirProyecto(e.target.value)}
               disabled={loadingProjects}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
             >
@@ -78,7 +93,10 @@ export default function RecorderPage() {
             <div className="flex gap-2">
               <input
                 value={targetUrl}
-                onChange={(e) => setTargetUrl(e.target.value)}
+                onChange={(e) => {
+                  setTargetUrl(e.target.value);
+                  setUrlEditadaAMano(true);
+                }}
                 placeholder="https://mi-app.com"
                 className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />

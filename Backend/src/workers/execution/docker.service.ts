@@ -27,7 +27,15 @@ export class DockerService {
       Env: envVars,
       HostConfig: {
         NetworkMode: network,
-        Binds: [`${this.config.get('ARTIFACTS_VOLUME_PATH')}:/artifacts`],
+        // Dos variables porque son dos preguntas distintas, y confundirlas costo una
+        // tarde: ARTIFACTS_MOUNT es QUE se monta en el contenedor de ejecucion -una
+        // carpeta del disco en desarrollo, el nombre de un volumen dentro de Docker- y
+        // ARTIFACTS_VOLUME_PATH es DONDE lee sus archivos este proceso. En desarrollo
+        // coinciden; corriendo dentro de Docker no, y usar una por la otra produce
+        // ejecuciones COMPLETED sin video ni traza, sin un solo error por ningun lado.
+        Binds: [
+          `${this.config.get('ARTIFACTS_MOUNT') ?? this.config.get('ARTIFACTS_VOLUME_PATH')}:/artifacts`,
+        ],
         AutoRemove: false,
       },
       Labels: { 'e2e.executionId': executionId },

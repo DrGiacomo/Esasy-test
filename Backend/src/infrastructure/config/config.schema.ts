@@ -40,7 +40,11 @@ export const configSchema = Joi.object({
   DOCKER_NETWORK: Joi.string().default('e2e-net'),
   RECORDER_IMAGE: Joi.string().default('e2e-platform/recorder:latest'),
   EXECUTION_IMAGE: Joi.string().default('e2e-platform/executor:latest'),
+  // DONDE lee sus archivos este proceso.
   ARTIFACTS_VOLUME_PATH: Joi.string().default('/artifacts'),
+  // QUE se monta en cada contenedor de ejecucion. Opcional: si falta se usa la de
+  // arriba, que es lo correcto cuando ambos procesos comparten el mismo disco.
+  ARTIFACTS_MOUNT: Joi.string().optional(),
   ARTIFACTS_RETENTION_DAYS: Joi.number().min(0).default(14), // 0 = no limpiar
   EXECUTION_TIMEOUT_MS: Joi.number().default(600000), // 10 min — máximo por ejecución
 

@@ -83,7 +83,10 @@ describe('RecorderService.convertToTest', () => {
         { type: 'type', value: 'llo' }, // se fusiona con el anterior
       ],
     });
-    prisma.testSuite.findFirst.mockResolvedValue({ id: 'suite-1' });
+    prisma.testSuite.findFirst.mockResolvedValue({
+      id: 'suite-1',
+      project: { baseUrl: 'http://x' },
+    });
     prisma.test.create.mockResolvedValue({ id: 'test-1' });
 
     const tx = {
@@ -98,7 +101,8 @@ describe('RecorderService.convertToTest', () => {
     expect(prisma.testStep.create).toHaveBeenCalledTimes(3);
 
     const created = prisma.testStep.create.mock.calls.map((c) => c[0].data);
-    expect(created[0]).toMatchObject({ order: 0, action: 'navigate', value: 'http://x' });
+    // Mismo origen que la baseUrl del proyecto -> se guarda la parte relativa
+    expect(created[0]).toMatchObject({ order: 0, action: 'navigate', value: '/' });
     expect(created[1]).toMatchObject({
       order: 1,
       action: 'click',
@@ -106,5 +110,52 @@ describe('RecorderService.convertToTest', () => {
       selectorType: 'testId',
     });
     expect(created[2]).toMatchObject({ order: 2, action: 'fill', value: 'hello' });
+  });
+
+  /**
+   * Guardar la direccion relativa al proyecto es lo que permite mover la aplicacion de
+   * entorno sin editar los tests uno a uno. Pero solo vale DENTRO del proyecto: un paso
+   * que sale a otro dominio -una pasarela de pago, un correo- tiene que seguir yendo
+   * donde iba aunque el proyecto se mueva. Los tres casos, por separado.
+   */
+  describe('la direccion de los pasos navigate', () => {
+    async function convertirCon(baseUrl: string | null, urls: string[]): Promise<string[]> {
+      const { prisma, service } = build();
+      prisma.recording.findUnique.mockResolvedValue({
+        id: 'r1',
+        orgId: 'org-1',
+        targetUrl: urls[0],
+        steps: urls.map((url) => ({ type: 'navigate', url })),
+      });
+      prisma.testSuite.findFirst.mockResolvedValue({ id: 'suite-1', project: { baseUrl } });
+      prisma.test.create.mockResolvedValue({ id: 'test-1' });
+      const tx = {
+        test: { create: prisma.test.create },
+        testStep: { create: prisma.testStep.create },
+      };
+      prisma.$transaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
+      await service.convertToTest('r1', 'suite-1', 'T', 'org-1');
+      const llamadas = prisma.testStep.create.mock.calls as Array<[{ data: { value: string } }]>;
+      return llamadas.map((c) => c[0].data.value);
+    }
+
+    it('dentro del proyecto: se guarda relativa', async () => {
+      const valores = await convertirCon('https://app.ejemplo.com', [
+        'https://app.ejemplo.com/login?next=/panel',
+      ]);
+      expect(valores[0]).toBe('/login?next=/panel');
+    });
+
+    it('otro dominio: se guarda entera', async () => {
+      const valores = await convertirCon('https://app.ejemplo.com', [
+        'https://pasarela-de-pago.com/checkout',
+      ]);
+      expect(valores[0]).toBe('https://pasarela-de-pago.com/checkout');
+    });
+
+    it('sin baseUrl: no se toca nada', async () => {
+      const valores = await convertirCon(null, ['https://app.ejemplo.com/login']);
+      expect(valores[0]).toBe('https://app.ejemplo.com/login');
+    });
   });
 });

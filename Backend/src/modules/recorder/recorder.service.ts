@@ -171,11 +171,12 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
     // Verify suite belongs to org
     const suite = await this.prisma.testSuite.findFirst({
       where: { id: suiteId, project: { organizationId: orgId } },
+      include: { project: { select: { baseUrl: true } } },
     });
     if (!suite) throw new NotFoundException('Test suite not found');
 
     const rawSteps = rec.steps as unknown as CapturedStep[];
-    const mappedSteps = this.collapseSteps(rawSteps);
+    const mappedSteps = this.collapseSteps(rawSteps, suite.project.baseUrl);
 
     return this.prisma.$transaction(async (tx) => {
       const test = await tx.test.create({
@@ -199,7 +200,7 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Collapse consecutive type events, deduplicate same-URL navigates */
-  private collapseSteps(steps: CapturedStep[]): MappedStep[] {
+  private collapseSteps(steps: CapturedStep[], baseUrl?: string | null): MappedStep[] {
     const collapsed: CapturedStep[] = [];
     for (const step of steps) {
       const prev = collapsed[collapsed.length - 1];
@@ -212,7 +213,7 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
       }
       collapsed.push({ ...step });
     }
-    return collapsed.map((step) => this.toTestStep(step));
+    return collapsed.map((step) => this.toTestStep(step, baseUrl));
   }
 
   /**
@@ -232,12 +233,46 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
     return 'el elemento';
   }
 
-  private toTestStep(step: CapturedStep): MappedStep {
+  /**
+   * Guarda la direccion RELATIVA al proyecto cuando cae dentro de el.
+   *
+   * Antes cada paso llevaba la direccion entera escrita dentro, y la `baseUrl` del
+   * proyecto no la usaba nadie mas que la IA. La consecuencia era que mover la aplicacion
+   * de sitio -de pruebas a produccion, o un dominio nuevo- obligaba a editar los tests
+   * UNO A UNO. Con la parte relativa guardada, cambiar de entorno es cambiar un campo.
+   *
+   * Lo que NO hace, y es a proposito:
+   *   - Si la URL apunta a otro dominio, se guarda entera. Un paso que sale de la
+   *     aplicacion (una pasarela de pago, un correo) tiene que seguir yendo donde iba
+   *     aunque el proyecto se mueva.
+   *   - Si no hay `baseUrl`, no toca nada.
+   *
+   * Los tests que ya existen siguen funcionando: el ejecutor acepta las dos formas.
+   */
+  private relativizar(url: string | undefined, baseUrl?: string | null): string {
+    if (!url) return '';
+    if (!baseUrl) return url;
+    let base: URL;
+    let destino: URL;
+    try {
+      base = new URL(baseUrl);
+      destino = new URL(url);
+    } catch {
+      return url; // Alguna de las dos no es una direccion valida: mejor no tocar nada.
+    }
+    if (base.origin !== destino.origin) return url;
+    const relativa = `${destino.pathname}${destino.search}${destino.hash}`;
+    return relativa || '/';
+  }
+
+  private toTestStep(step: CapturedStep, baseUrl?: string | null): MappedStep {
     const stype = step.selectorType ?? 'css';
     const que = this.nombrar(step);
     switch (step.type) {
-      case 'navigate':
-        return { action: 'navigate', value: step.url, description: `Ir a ${step.url}` };
+      case 'navigate': {
+        const destino = this.relativizar(step.url, baseUrl);
+        return { action: 'navigate', value: destino, description: `Ir a ${destino}` };
+      }
       case 'click':
         return step.selector
           ? {

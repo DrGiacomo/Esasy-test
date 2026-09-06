@@ -59,6 +59,8 @@ services:
     environment:
       DATABASE_URL: postgresql://e2e_user:e2e_pass@postgres:5432/e2e_platform
       REDIS_URL: redis://redis:6379
+      # El backend tambien lee de aqui: sirve los videos por HTTP y arma el informe.
+      ARTIFACTS_VOLUME_PATH: /artifacts
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     depends_on:
@@ -89,6 +91,16 @@ services:
       # misma red, asi que hablan por el nombre del servicio igual que el.
       CONTAINER_DATABASE_URL: postgresql://e2e_user:e2e_pass@postgres:5432/e2e_platform
       CONTAINER_REDIS_URL: redis://redis:6379
+      # Videos, trazas y capturas. Son DOS cosas distintas y el .env solo tenia una:
+      #   ARTIFACTS_MOUNT       -> que se monta en cada contenedor de ejecucion: el
+      #                            volumen, por su nombre, para que escriba DENTRO.
+      #   ARTIFACTS_VOLUME_PATH -> donde lee este proceso: su propio montaje.
+      # Con una sola, el modo Docker daba ejecuciones COMPLETED sin ninguna evidencia:
+      # el executor escribia en C:/artifacts del host y la plataforma miraba en su
+      # volumen, vacio. Los archivos existian -video, traza de 86 KB, captura final- y
+      # `traceUrl` se quedaba en null. Nada fallaba; solo desaparecia el resultado.
+      ARTIFACTS_MOUNT: easytest_artifacts
+      ARTIFACTS_VOLUME_PATH: /artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,7 +151,11 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  # Nombre fijo a proposito: el worker se lo pasa por NOMBRE a Docker al arrancar cada
+  # contenedor de ejecucion (ver ARTIFACTS_VOLUME_PATH abajo), y ese nombre no puede
+  # depender de como se llame la carpeta del proyecto.
   artifacts:
+    name: easytest_artifacts
 
 networks:
   e2e-net:

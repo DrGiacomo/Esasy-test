@@ -57,15 +57,40 @@ async function captureFailureContext(page, stepId) {
   return screenshotUrl;
 }
 
-async function runStep(page, step) {
+/**
+ * Resuelve a donde hay que ir.
+ *
+ * Acepta las DOS formas a proposito:
+ *   - absoluta  ("https://otra-cosa.com/pago")  -> se respeta tal cual. Son los pasos
+ *     grabados antes de este cambio y los que salen de la aplicacion adrede.
+ *   - relativa  ("/login")                      -> se une a la baseUrl del proyecto, que
+ *     es lo que permite mover la aplicacion de entorno sin editar los tests uno a uno.
+ *
+ * Si no hay baseUrl o la union falla, se devuelve lo que habia: un paso que antes
+ * funcionaba no puede empezar a fallar por esto.
+ */
+function resolverDestino(destino, baseUrl) {
+  if (!destino) return destino;
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(destino)) return destino;
+  if (!baseUrl) return destino;
+  try {
+    return new URL(destino, baseUrl).toString();
+  } catch {
+    return destino;
+  }
+}
+
+async function runStep(page, step, baseUrl) {
   const action = step.action;
   const selector = resolveSecrets(step.selector);
   const value = resolveSecrets(step.value);
 
   switch (action) {
-    case 'navigate':
-      await page.goto(value || selector, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    case 'navigate': {
+      const destino = resolverDestino(value || selector, baseUrl);
+      await page.goto(destino, { waitUntil: 'domcontentloaded', timeout: 30000 });
       break;
+    }
 
     case 'click':
       if (selector) {
@@ -149,7 +174,7 @@ async function runStep(page, step) {
 }
 
 async function runTest(browser, db, redis, row) {
-  const { result_id, test_id, test_name, steps } = row;
+  const { result_id, test_id, test_name, base_url, steps } = row;
   const activeSteps = (steps ?? []).filter(Boolean);
 
   console.log(`[executor] Test "${test_name}" — ${activeSteps.length} step(s)`);
@@ -193,7 +218,7 @@ async function runTest(browser, db, redis, row) {
       failedStepId = step.id;
       failedIndex = i;
 
-      await runStep(page, step);
+      await runStep(page, step, base_url);
 
       stepResults.push({ stepId: step.id, status: 'PASSED', durationMs: Date.now() - stepStart, errorDetails: null, screenshotUrl: null });
     }
@@ -294,15 +319,20 @@ async function main() {
 
   try {
     const { rows: results } = await db.query(
+      // La baseUrl del proyecto viaja con cada test: los pasos `navigate` pueden estar
+      // guardados en relativo ("/login") y aqui es donde se resuelven contra ella.
       `SELECT er.id             AS result_id,
               er."testId"       AS test_id,
               t.name            AS test_name,
+              p."baseUrl"       AS base_url,
               json_agg(ts ORDER BY ts."order") FILTER (WHERE ts.id IS NOT NULL) AS steps
        FROM   execution_results er
-       JOIN   tests      t  ON t.id  = er."testId"
+       JOIN   tests       t  ON t.id  = er."testId"
+       JOIN   test_suites s  ON s.id  = t."suiteId"
+       JOIN   projects    p  ON p.id  = s."projectId"
        LEFT JOIN test_steps ts ON ts."testId" = t.id AND ts."isDisabled" = false
        WHERE  er."executionId" = $1
-       GROUP  BY er.id, er."testId", t.name
+       GROUP  BY er.id, er."testId", t.name, p."baseUrl"
        ORDER  BY er."createdAt"`,
       [EXECUTION_ID],
     );
