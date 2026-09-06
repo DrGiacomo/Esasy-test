@@ -23,10 +23,10 @@ export function FlowCanvas({ steps, selectedId, onSelect, onRemove, onReorder }:
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
+        <div className="flex-1 overflow-y-auto bg-tinta-50 p-6">
           {steps.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-tinta-500">
                 Arrastra pasos desde el panel izquierdo o haz clic para añadirlos
               </p>
             </div>

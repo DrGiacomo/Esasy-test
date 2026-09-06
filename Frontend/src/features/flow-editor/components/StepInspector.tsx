@@ -31,8 +31,8 @@ const FIELDS: Record<string, { key: keyof TestStep; label: string; placeholder: 
 export function StepInspector({ step, onChange }: Props) {
   if (!step) {
     return (
-      <div className="flex w-64 items-center justify-center border-l border-gray-200 bg-white p-6">
-        <p className="text-center text-sm text-gray-400">Selecciona un paso para editarlo</p>
+      <div className="flex w-64 items-center justify-center border-l border-tinta-300 bg-tinta-50 p-6">
+        <p className="text-center text-sm text-tinta-500">Selecciona un paso para editarlo</p>
       </div>
     );
   }
@@ -40,17 +40,17 @@ export function StepInspector({ step, onChange }: Props) {
   const fields = FIELDS[step.action] ?? [];
 
   return (
-    <div className="w-64 border-l border-gray-200 bg-white p-4">
-      <p className="mb-4 text-sm font-semibold text-gray-800">Paso: {step.action}</p>
+    <div className="w-64 border-l border-tinta-300 bg-tinta-50 p-4">
+      <p className="mb-4 text-sm font-semibold text-tinta-800">Paso: {step.action}</p>
       <div className="space-y-3">
         {fields.map(({ key, label, placeholder }) => (
           <div key={key}>
-            <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+            <label className="mb-1 block text-xs font-medium text-tinta-600">{label}</label>
             <input
               value={String(step[key] ?? '')}
               onChange={(e) => onChange({ [key]: e.target.value })}
               placeholder={placeholder}
-              className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+              className="w-full rounded-lg border border-tinta-300 px-2.5 py-1.5 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-300"
             />
           </div>
         ))}

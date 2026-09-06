@@ -82,12 +82,12 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
   }
 
   return (
-    <div className="relative flex-1 bg-gray-900 flex items-center justify-center overflow-hidden">
+    <div className="relative flex-1 bg-tinta-900 flex items-center justify-center overflow-hidden">
       {/* Overlay while not connected */}
       {!connected && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 z-10 gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
-          <p className="text-sm text-gray-400">Iniciando sesión de grabación…</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-tinta-900/90 z-10 gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-oro-500 border-t-transparent" />
+          <p className="text-sm text-tinta-500">Iniciando sesión de grabación…</p>
         </div>
       )}
 
@@ -101,16 +101,16 @@ export function RemoteBrowserFrame({ frame, connected, onAction }: Props) {
           onDoubleClick={handleDblClick}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
-          className="max-h-full max-w-full object-contain cursor-crosshair select-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="max-h-full max-w-full object-contain cursor-crosshair select-none focus:outline-none focus:ring-2 focus:ring-oro-500"
           draggable={false}
         />
       ) : (
-        connected && <p className="text-sm text-gray-500">Sin señal de video… esperando frames</p>
+        connected && <p className="text-sm text-tinta-500">Sin señal de video… esperando frames</p>
       )}
 
       {/* Hint */}
       {connected && frame && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 rounded bg-black/60 px-3 py-1 text-xs text-gray-300 pointer-events-none">
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 rounded bg-black/60 px-3 py-1 text-xs text-tinta-300 pointer-events-none">
           Click para interactuar · Escribe para escribir · Enter / Backspace / Flechas funcionan
         </div>
       )}

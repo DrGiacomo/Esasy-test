@@ -66,10 +66,10 @@ export default function RecorderPage() {
   if (!session) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6">
-        <Video size={48} className="text-gray-300" />
+        <Video size={48} className="text-tinta-300" />
         <div className="w-full max-w-md space-y-4">
-          <h1 className="text-xl font-bold text-gray-900 text-center">Grabador de pruebas</h1>
-          <p className="text-sm text-gray-500 text-center">
+          <h1 className="text-xl font-bold text-tinta-900 text-center">Grabador de pruebas</h1>
+          <p className="text-sm text-tinta-500 text-center">
             Elige el proyecto y se rellenará su dirección. Puedes cambiarla para grabar una
             parte concreta. El navegador remoto se abrirá y tus acciones se convertirán en
             pasos de prueba automáticamente.
@@ -79,7 +79,7 @@ export default function RecorderPage() {
               value={selectedProjectId}
               onChange={(e) => elegirProyecto(e.target.value)}
               disabled={loadingProjects}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
             >
               <option value="">
                 {loadingProjects ? 'Cargando proyectos…' : 'Selecciona un proyecto'}
@@ -98,7 +98,7 @@ export default function RecorderPage() {
                   setUrlEditadaAMano(true);
                 }}
                 placeholder="https://mi-app.com"
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="flex-1 rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
               />
               <Button
                 onClick={() => void startSession()}
@@ -129,16 +129,16 @@ export default function RecorderPage() {
       </div>
 
       {/* Panel derecho: pasos capturados */}
-      <div className="w-64 border-l border-gray-700 bg-gray-900 p-4 overflow-y-auto">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <div className="w-64 border-l border-tinta-700 bg-tinta-900 p-4 overflow-y-auto">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-tinta-500">
           Pasos capturados ({capturedSteps.length})
         </p>
         <div className="space-y-1">
           {capturedSteps.map((step, i) => (
-            <div key={i} className="rounded bg-gray-800 px-3 py-2 text-xs text-gray-300">
-              <span className="font-medium text-indigo-400">{step.type}</span>
+            <div key={i} className="rounded bg-tinta-800 px-3 py-2 text-xs text-tinta-300">
+              <span className="font-medium text-oro-500">{step.type}</span>
               {step.selector && (
-                <span className="ml-1 text-gray-500 font-mono truncate">{step.selector}</span>
+                <span className="ml-1 text-tinta-500 font-mono truncate">{step.selector}</span>
               )}
             </div>
           ))}

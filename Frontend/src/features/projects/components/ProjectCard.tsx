@@ -19,26 +19,26 @@ export function ProjectCard({ project, onArchive }: Props) {
   }
 
   return (
-    <div className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md">
+    <div className="group flex items-center gap-4 rounded-xl border border-tinta-300 bg-tinta-50 p-5 shadow-sm transition-all hover:border-oro-300 hover:shadow-md">
       <Link
         to={ROUTES.PROJECT_DETAIL(project.id)}
         className="flex flex-1 items-center gap-4 min-w-0"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sangre-50 text-sangre-600 shrink-0">
           <Globe size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 truncate">{project.name}</p>
-          <p className="text-xs text-gray-500 truncate">{project.baseUrl}</p>
+          <p className="font-semibold text-tinta-900 truncate">{project.name}</p>
+          <p className="text-xs text-tinta-500 truncate">{project.baseUrl}</p>
         </div>
         <ChevronRight
           size={18}
-          className="text-gray-400 group-hover:text-indigo-500 transition-colors shrink-0"
+          className="text-tinta-500 group-hover:text-oro-500 transition-colors shrink-0"
         />
       </Link>
       <button
         onClick={handleArchive}
-        className="shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+        className="shrink-0 rounded-lg p-2 text-tinta-500 hover:bg-fallo-100 hover:text-fallo-500 transition-colors"
         title="Eliminar proyecto"
       >
         <Trash2 size={16} />

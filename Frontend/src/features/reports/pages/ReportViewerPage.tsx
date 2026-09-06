@@ -36,13 +36,13 @@ export default function ReportViewerPage() {
         <LoadingSpinner />
       </div>
     );
-  if (!report) return <p className="text-gray-500">Reporte no encontrado</p>;
+  if (!report) return <p className="text-tinta-500">Reporte no encontrado</p>;
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Reporte de ejecución</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-tinta-900">Reporte de ejecución</h1>
+        <p className="text-sm text-tinta-500">
           {report.project.name} — {report.project.baseUrl}
         </p>
       </div>

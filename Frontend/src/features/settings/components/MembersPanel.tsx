@@ -59,17 +59,17 @@ export function MembersPanel() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="rounded-xl border border-tinta-300 bg-tinta-50 overflow-hidden">
         {members.map((m, i) => (
           <div
             key={m.id}
-            className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+            className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-tinta-200' : ''}`}
           >
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800">
+              <p className="text-sm font-medium text-tinta-800">
                 {m.user?.displayName ?? m.user?.email}
               </p>
-              <p className="text-xs text-gray-500">{m.user?.email}</p>
+              <p className="text-xs text-tinta-500">{m.user?.email}</p>
             </div>
             <Badge label={m.role} color={roleColor[m.role] ?? 'gray'} />
           </div>
@@ -84,7 +84,7 @@ export function MembersPanel() {
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="email@ejemplo.com"
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
           />
           <div className="flex justify-end gap-3">
             <Button variant="secondary" type="button" onClick={() => setShowInvite(false)}>

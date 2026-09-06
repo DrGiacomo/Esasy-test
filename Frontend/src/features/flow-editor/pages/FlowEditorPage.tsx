@@ -73,15 +73,15 @@ export default function FlowEditorPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
+      <div className="flex items-center justify-between border-b border-tinta-300 bg-tinta-50 px-6 py-3">
         <div>
-          <h1 className="text-base font-semibold text-gray-900">{test.name}</h1>
-          <p className="text-xs text-gray-500">Editor visual — {steps.length} pasos</p>
+          <h1 className="text-base font-semibold text-tinta-900">{test.name}</h1>
+          <p className="text-xs text-tinta-500">Editor visual — {steps.length} pasos</p>
         </div>
         <button
           onClick={() => void handleSave()}
           disabled={saving}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          className="flex items-center gap-2 rounded-lg bg-sangre-600 px-4 py-2 text-sm font-medium text-white hover:bg-sangre-700 disabled:opacity-60"
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           Guardar cambios

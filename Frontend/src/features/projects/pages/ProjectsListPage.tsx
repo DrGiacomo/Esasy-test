@@ -20,7 +20,7 @@ export default function ProjectsListPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Proyectos</h1>
+        <h1 className="text-xl font-bold text-tinta-900">Proyectos</h1>
         <Button onClick={() => setShowModal(true)}>
           <Plus size={16} />
           Nuevo proyecto
@@ -33,7 +33,7 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-lg bg-fallo-100 px-4 py-3 text-sm text-fallo-500">{error}</p>}
 
       {!loading && !error && projects.length === 0 && (
         <EmptyState

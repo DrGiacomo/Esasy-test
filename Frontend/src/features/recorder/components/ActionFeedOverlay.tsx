@@ -7,10 +7,10 @@ export function ActionFeedOverlay({ steps }: { steps: CapturedStep[] }) {
 
   return (
     <div className="absolute bottom-4 left-4 right-4 z-20 rounded-lg bg-black/70 px-4 py-2 text-xs text-white backdrop-blur">
-      <span className="font-medium text-indigo-300">{last.type}</span>
-      {last.selector && <span className="ml-2 text-gray-300 font-mono">{last.selector}</span>}
-      {last.url && <span className="ml-2 text-gray-300">{last.url}</span>}
-      <span className="ml-3 text-gray-500">{steps.length} acciones capturadas</span>
+      <span className="font-medium text-oro-300">{last.type}</span>
+      {last.selector && <span className="ml-2 text-tinta-300 font-mono">{last.selector}</span>}
+      {last.url && <span className="ml-2 text-tinta-300">{last.url}</span>}
+      <span className="ml-3 text-tinta-500">{steps.length} acciones capturadas</span>
     </div>
   );
 }

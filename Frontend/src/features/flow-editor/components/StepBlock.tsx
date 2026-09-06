@@ -6,12 +6,12 @@ import { describeStep } from '@/lib/describe-step';
 import { useUiMode } from '@/hooks/useUiMode';
 
 const ACTION_COLORS: Record<string, string> = {
-  navigate: 'bg-blue-100 text-blue-700 border-blue-200',
-  click: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  fill: 'bg-purple-100 text-purple-700 border-purple-200',
-  assert_visible: 'bg-orange-100 text-orange-700 border-orange-200',
-  assert_text: 'bg-orange-100 text-orange-700 border-orange-200',
-  screenshot: 'bg-gray-100 text-gray-600 border-gray-200',
+  navigate: 'bg-espera-100 text-espera-500 border-espera-100',
+  click: 'bg-paso-100 text-paso-500 border-paso-100',
+  fill: 'bg-espera-100 text-espera-500 border-espera-100',
+  assert_visible: 'bg-espera-100 text-espera-500 border-espera-100',
+  assert_text: 'bg-espera-100 text-espera-500 border-espera-100',
+  screenshot: 'bg-tinta-200 text-tinta-600 border-tinta-300',
 };
 
 interface Props {
@@ -33,7 +33,7 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const colorCls = ACTION_COLORS[step.action] ?? 'bg-gray-100 text-gray-600 border-gray-200';
+  const colorCls = ACTION_COLORS[step.action] ?? 'bg-tinta-200 text-tinta-600 border-tinta-300';
 
   return (
     <div
@@ -42,14 +42,14 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
       onClick={onSelect}
       className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
         isSelected
-          ? 'border-indigo-400 ring-2 ring-indigo-200'
-          : 'border-gray-200 bg-white hover:border-gray-300'
+          ? 'border-oro-500 ring-2 ring-sangre-200'
+          : 'border-tinta-300 bg-tinta-50 hover:border-tinta-300'
       }`}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab text-gray-400 hover:text-gray-600"
+        className="cursor-grab text-tinta-500 hover:text-tinta-600"
       >
         <GripVertical size={16} />
       </button>
@@ -60,9 +60,9 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
 
       {/* En SENCILLO, la frase; en COMPLEJO, el selector como siempre. */}
       {sencillo ? (
-        <span className="flex-1 truncate text-sm text-gray-700">{describeStep(step)}</span>
+        <span className="flex-1 truncate text-sm text-tinta-700">{describeStep(step)}</span>
       ) : (
-        <span className="flex-1 truncate font-mono text-xs text-gray-700">
+        <span className="flex-1 truncate font-mono text-xs text-tinta-700">
           {step.selector ?? step.value ?? step.description ?? ''}
         </span>
       )}
@@ -72,7 +72,7 @@ export function StepBlock({ step, isSelected, onSelect, onRemove }: Props) {
           e.stopPropagation();
           onRemove();
         }}
-        className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-400"
+        className="rounded p-1 text-tinta-300 hover:bg-fallo-100 hover:text-fallo-500"
       >
         <Trash2 size={14} />
       </button>

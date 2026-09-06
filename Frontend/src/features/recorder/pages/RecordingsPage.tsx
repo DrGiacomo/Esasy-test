@@ -39,16 +39,16 @@ function stepLabel(step: RecordingStep): string {
 
 function stepColor(type: string): string {
   const map: Record<string, string> = {
-    navigate: 'text-blue-400',
-    click: 'text-green-400',
-    dblclick: 'text-green-300',
-    fill: 'text-yellow-400',
-    type: 'text-yellow-300',
-    press: 'text-purple-400',
-    select: 'text-orange-400',
-    hover: 'text-gray-400',
+    navigate: 'text-espera-500',
+    click: 'text-paso-500',
+    dblclick: 'text-paso-500',
+    fill: 'text-espera-500',
+    type: 'text-espera-500',
+    press: 'text-espera-500',
+    select: 'text-espera-500',
+    hover: 'text-tinta-500',
   };
-  return map[type] ?? 'text-gray-300';
+  return map[type] ?? 'text-tinta-300';
 }
 
 function formatDuration(start: string, stop: string) {
@@ -116,20 +116,20 @@ function ConvertModal({
   return (
     <form onSubmit={(e) => void handleConvert(e)} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del test</label>
+        <label className="block text-sm font-medium text-tinta-700 mb-1">Nombre del test</label>
         <input
           required
           value={testName}
           onChange={(e) => setTestName(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Proyecto</label>
+        <label className="block text-sm font-medium text-tinta-700 mb-1">Proyecto</label>
         <select
           value={selectedProjectId}
           onChange={(e) => void handleProjectChange(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
         >
           <option value="">Selecciona un proyecto</option>
           {projects.map((p) => (
@@ -140,13 +140,13 @@ function ConvertModal({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Suite de prueba</label>
+        <label className="block text-sm font-medium text-tinta-700 mb-1">Suite de prueba</label>
         <select
           required
           value={suiteId}
           onChange={(e) => setSuiteId(e.target.value)}
           disabled={!selectedProjectId || loadingSuites}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+          className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none disabled:opacity-50"
         >
           <option value="">{loadingSuites ? 'Cargando…' : 'Selecciona una suite'}</option>
           {suites.map((s) => (
@@ -156,12 +156,12 @@ function ConvertModal({
           ))}
         </select>
         {selectedProjectId && !loadingSuites && suites.length === 0 && (
-          <p className="mt-1 text-xs text-amber-600">
+          <p className="mt-1 text-xs text-espera-500">
             Este proyecto no tiene suites. Crea una en la página del proyecto primero.
           </p>
         )}
       </div>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-tinta-500">
         Se crearán {rec.steps.length} pasos a partir de esta grabación.
       </p>
       <div className="flex justify-end gap-3 pt-2">
@@ -202,18 +202,18 @@ function RecordingRow({ rec, onDeleted }: { rec: Recording; onDeleted: () => voi
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 overflow-hidden">
+    <div className="rounded-lg border border-tinta-700 bg-tinta-800 overflow-hidden">
       <div className="flex items-center gap-4 px-4 py-3">
         <button
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center gap-4 text-left min-w-0"
         >
-          <Video size={16} className="text-indigo-400 shrink-0" />
+          <Video size={16} className="text-oro-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{rec.targetUrl}</p>
-            <p className="text-xs text-gray-400">{rec.project.name}</p>
+            <p className="text-xs text-tinta-500">{rec.project.name}</p>
           </div>
-          <div className="flex items-center gap-4 shrink-0 text-xs text-gray-400">
+          <div className="flex items-center gap-4 shrink-0 text-xs text-tinta-500">
             <span className="flex items-center gap-1">
               <Clock size={12} />
               {formatDuration(rec.startedAt, rec.stoppedAt)}
@@ -237,15 +237,15 @@ function RecordingRow({ rec, onDeleted }: { rec: Recording; onDeleted: () => voi
       </div>
 
       {open && (
-        <div className="border-t border-gray-700 px-4 py-3 space-y-1 max-h-64 overflow-y-auto">
+        <div className="border-t border-tinta-700 px-4 py-3 space-y-1 max-h-64 overflow-y-auto">
           {rec.steps.length === 0 ? (
-            <p className="text-xs text-gray-500 italic">Sin pasos capturados</p>
+            <p className="text-xs text-tinta-500 italic">Sin pasos capturados</p>
           ) : (
             rec.steps.map((step, i) => (
               <div key={i} className="flex items-start gap-2 text-xs">
-                <span className="text-gray-600 w-5 shrink-0 text-right">{i + 1}.</span>
+                <span className="text-tinta-600 w-5 shrink-0 text-right">{i + 1}.</span>
                 <span className={`font-medium shrink-0 ${stepColor(step.type)}`}>{step.type}</span>
-                <span className="text-gray-300 truncate">{stepLabel(step)}</span>
+                <span className="text-tinta-300 truncate">{stepLabel(step)}</span>
               </div>
             ))
           )}
@@ -273,26 +273,26 @@ export default function RecordingsPage({ projectId }: { projectId?: string }) {
   if (loading)
     return (
       <div className="flex items-center justify-center h-full py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-oro-500 border-t-transparent" />
       </div>
     );
-  if (error) return <p className="text-red-400 p-6">{error}</p>;
+  if (error) return <p className="text-fallo-500 p-6">{error}</p>;
 
   return (
     <div className="space-y-4">
       {!projectId && (
         <div className="flex items-center gap-3">
-          <Video size={22} className="text-indigo-400" />
+          <Video size={22} className="text-oro-500" />
           <h1 className="text-xl font-bold text-white">Grabaciones</h1>
-          <span className="ml-auto text-sm text-gray-400">{recordings.length} grabaciones</span>
+          <span className="ml-auto text-sm text-tinta-500">{recordings.length} grabaciones</span>
         </div>
       )}
 
       {recordings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-500">
-          <Video size={36} className="text-gray-600" />
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-tinta-500">
+          <Video size={36} className="text-tinta-600" />
           <p className="text-sm">No hay grabaciones todavía.</p>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-tinta-600">
             Inicia una sesión en el Grabador y haz click en Detener para guardar.
           </p>
         </div>

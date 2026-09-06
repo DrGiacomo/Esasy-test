@@ -4,11 +4,11 @@ interface BadgeProps {
 }
 
 const colorMap = {
-  gray: 'bg-gray-100 text-gray-600',
-  indigo: 'bg-indigo-100 text-indigo-700',
-  emerald: 'bg-emerald-100 text-emerald-700',
-  red: 'bg-red-100 text-red-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
+  gray: 'bg-tinta-200 text-tinta-600',
+  indigo: 'bg-sangre-100 text-sangre-700',
+  emerald: 'bg-paso-100 text-paso-500',
+  red: 'bg-fallo-100 text-fallo-500',
+  yellow: 'bg-espera-100 text-espera-500',
 };
 
 export function Badge({ label, color = 'gray' }: BadgeProps) {

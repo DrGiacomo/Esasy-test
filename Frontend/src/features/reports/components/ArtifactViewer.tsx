@@ -64,7 +64,7 @@ export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
       {video && (
         <video
           controls
-          className="w-full rounded-lg border border-gray-200 bg-black"
+          className="w-full rounded-lg border border-tinta-300 bg-black"
           style={{ maxHeight: '400px' }}
         >
           <source src={video} type="video/webm" />
@@ -77,7 +77,7 @@ export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
             href={screenshot}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1 rounded-lg border border-tinta-300 px-3 py-1.5 text-xs text-tinta-600 hover:bg-tinta-50"
           >
             <Image size={14} />
             Screenshot
@@ -88,7 +88,7 @@ export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
             href={trace}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+            className="flex items-center gap-1 rounded-lg border border-tinta-300 px-3 py-1.5 text-xs text-tinta-600 hover:bg-tinta-50"
           >
             <FileCode size={14} />
             Trace

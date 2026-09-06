@@ -37,8 +37,8 @@ interface Props {
 
 export function StepBlockPalette({ onAdd }: Props) {
   return (
-    <div className="w-48 border-r border-gray-200 bg-white p-3">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div className="w-48 border-r border-tinta-300 bg-tinta-50 p-3">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-tinta-500">
         Pasos disponibles
       </p>
       <div className="space-y-1">
@@ -47,7 +47,7 @@ export function StepBlockPalette({ onAdd }: Props) {
             key={action}
             onClick={() => onAdd(action)}
             title={description}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-tinta-700 hover:bg-sangre-50 hover:text-sangre-700"
           >
             <Icon size={16} />
             {label}

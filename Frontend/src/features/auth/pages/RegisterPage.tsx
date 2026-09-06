@@ -23,15 +23,15 @@ export default function RegisterPage() {
     setForm((p) => ({ ...p, [key]: e.target.value }));
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-tinta-50 p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2">
-          <Bot size={40} className="text-indigo-600" />
-          <h1 className="text-2xl font-bold text-gray-900">E2E Platform</h1>
+          <Bot size={40} className="text-sangre-600" />
+          <h1 className="text-2xl font-bold text-tinta-900">E2E Platform</h1>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-6 text-lg font-semibold text-gray-900">Crear cuenta</h2>
+        <div className="rounded-xl border border-tinta-300 bg-tinta-50 p-6 shadow-sm">
+          <h2 className="mb-6 text-lg font-semibold text-tinta-900">Crear cuenta</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {[
@@ -46,7 +46,7 @@ export default function RegisterPage() {
               },
             ].map(({ key, label, type, placeholder }) => (
               <div key={key}>
-                <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
+                <label className="mb-1 block text-sm font-medium text-tinta-700">{label}</label>
                 <input
                   type={type}
                   required
@@ -60,14 +60,14 @@ export default function RegisterPage() {
                   maxLength={key === 'password' ? 64 : 80}
                   value={form[key as keyof typeof form]}
                   onChange={field(key as keyof typeof form)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
                   placeholder={placeholder}
                 />
               </div>
             ))}
 
             {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+              <p className="rounded-lg bg-fallo-100 px-3 py-2 text-sm text-fallo-500">{error}</p>
             )}
 
             <Button type="submit" loading={loading} className="w-full justify-center">
@@ -75,9 +75,9 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <p className="mt-4 text-center text-sm text-gray-500">
+          <p className="mt-4 text-center text-sm text-tinta-500">
             ¿Ya tienes cuenta?{' '}
-            <Link to={ROUTES.LOGIN} className="font-medium text-indigo-600 hover:underline">
+            <Link to={ROUTES.LOGIN} className="font-medium text-sangre-600 hover:underline">
               Iniciar sesión
             </Link>
           </p>

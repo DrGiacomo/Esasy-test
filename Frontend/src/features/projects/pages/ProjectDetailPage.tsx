@@ -51,23 +51,23 @@ export default function ProjectDetailPage() {
         <LoadingSpinner />
       </div>
     );
-  if (!project) return <p className="text-gray-500">Proyecto no encontrado</p>;
+  if (!project) return <p className="text-tinta-500">Proyecto no encontrado</p>;
 
   return (
     <div>
       <div className="mb-5">
-        <p className="text-sm text-gray-500">{project.baseUrl}</p>
-        <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
+        <p className="text-sm text-tinta-500">{project.baseUrl}</p>
+        <h1 className="text-xl font-bold text-tinta-900">{project.name}</h1>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 border-b border-gray-200">
+      <div className="flex gap-1 mb-5 border-b border-tinta-300">
         <button
           onClick={() => setTab('suites')}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             tab === 'suites'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-sangre-600 text-sangre-600'
+              : 'border-transparent text-tinta-500 hover:text-tinta-700'
           }`}
         >
           <FolderOpen size={15} />
@@ -77,8 +77,8 @@ export default function ProjectDetailPage() {
           onClick={() => setTab('recordings')}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             tab === 'recordings'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'border-sangre-600 text-sangre-600'
+              : 'border-transparent text-tinta-500 hover:text-tinta-700'
           }`}
         >
           <Film size={15} />
@@ -90,7 +90,7 @@ export default function ProjectDetailPage() {
       {tab === 'suites' && (
         <>
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm text-gray-500">{suites.length} suites</span>
+            <span className="text-sm text-tinta-500">{suites.length} suites</span>
             <Button size="sm" onClick={() => setShowModal(true)}>
               <Plus size={14} />
               Nueva suite
@@ -98,16 +98,16 @@ export default function ProjectDetailPage() {
           </div>
 
           {suites.length === 0 ? (
-            <p className="text-sm text-gray-400">Sin suites todavía.</p>
+            <p className="text-sm text-tinta-500">Sin suites todavía.</p>
           ) : (
             <div className="space-y-2">
               {suites.map((s) => (
                 <Link
                   key={s.id}
                   to={ROUTES.TESTS(s.id)}
-                  className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-800 hover:border-indigo-300 hover:bg-indigo-50"
+                  className="flex items-center gap-3 rounded-lg border border-tinta-300 bg-tinta-50 px-4 py-3 text-sm font-medium text-tinta-800 hover:border-oro-300 hover:bg-sangre-50"
                 >
-                  <FolderOpen size={16} className="text-indigo-500" />
+                  <FolderOpen size={16} className="text-oro-500" />
                   {s.name}
                 </Link>
               ))}
@@ -120,7 +120,7 @@ export default function ProjectDetailPage() {
                 required
                 value={suiteName}
                 onChange={(e) => setSuiteName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-lg border border-tinta-300 px-3 py-2 text-sm focus:border-oro-500 focus:outline-none"
                 placeholder="Nombre de la suite"
               />
               <div className="flex justify-end gap-3">

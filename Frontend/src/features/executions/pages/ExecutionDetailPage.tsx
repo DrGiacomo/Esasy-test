@@ -81,7 +81,7 @@ export default function ExecutionDetailPage() {
         <LoadingSpinner />
       </div>
     );
-  if (!execution) return <p className="text-gray-500">Ejecución no encontrada</p>;
+  if (!execution) return <p className="text-tinta-500">Ejecución no encontrada</p>;
 
   const displayStatus = status ?? execution.status;
 
@@ -89,7 +89,7 @@ export default function ExecutionDetailPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-900">Ejecución</h1>
+          <h1 className="text-xl font-bold text-tinta-900">Ejecución</h1>
           <StatusBadge status={displayStatus} />
         </div>
         <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export default function ExecutionDetailPage() {
       </div>
 
       {!connected && ACTIVE_STATUSES.includes(displayStatus) && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-espera-100 bg-espera-100 px-4 py-2 text-sm text-espera-500">
           <WifiOff size={14} className="shrink-0 animate-pulse" />
           Reconectando… los resultados siguen actualizándose en segundo plano.
         </div>

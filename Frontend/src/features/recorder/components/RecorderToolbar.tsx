@@ -17,14 +17,14 @@ export function RecorderToolbar({ onNavigate, onStop, loading }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-3 border-b border-gray-700 bg-gray-800 px-4 py-2">
+    <div className="flex items-center gap-3 border-b border-tinta-700 bg-tinta-800 px-4 py-2">
       <form onSubmit={handleNavigate} className="flex flex-1 items-center gap-2">
-        <Globe size={16} className="text-gray-400" />
+        <Globe size={16} className="text-tinta-500" />
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://..."
-          className="flex-1 rounded bg-gray-700 px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="flex-1 rounded bg-tinta-700 px-3 py-1.5 text-sm text-white placeholder-tinta-500 focus:outline-none focus:ring-1 focus:ring-oro-500"
         />
         <Button size="sm" type="submit" disabled={loading}>
           Ir

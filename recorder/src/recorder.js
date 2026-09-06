@@ -158,9 +158,55 @@ async function main() {
   });
 
   let frameInterval = null;
+  let cdp = null;
 
-  function startFrameStream() {
-    if (frameInterval) return;
+  /**
+   * Transmite la pantalla del navegador remoto.
+   *
+   * ─── Por que no se usa `page.screenshot()` ───
+   * Hasta el 2026-09-06 esto hacia una captura cada 200 ms. Dos problemas, y el segundo
+   * es el que se sufria:
+   *
+   *   1. 5 imagenes por segundo se ven a tirones en cualquier cosa.
+   *   2. `page.screenshot()` PAUSA el renderizado del navegador para capturar. En una
+   *      pagina quieta ni se nota; en uno de esos juegos que redibujan sesenta veces por
+   *      segundo, cada captura le roba el turno al juego y la grabacion se vuelve
+   *      injugable. El usuario lo reporto grabando en `frivclassic.com`.
+   *
+   * ─── Lo que se usa ahora ───
+   * `Page.startScreencast` del protocolo de Chrome: el navegador EMPUJA un fotograma
+   * cuando algo cambia, sin pausar nada. Es lo que usan las herramientas de control
+   * remoto. `everyNthFrame: 2` limita el caudal a la mitad para no ahogar el socket con
+   * un juego a 60 fps; con eso salen unos 30 por segundo, seis veces mas que antes.
+   *
+   * Cada fotograma hay que confirmarlo (`screencastFrameAck`) o Chrome deja de enviar.
+   */
+  async function startFrameStream() {
+    if (cdp || frameInterval) return;
+
+    try {
+      cdp = await page.context().newCDPSession(page);
+      cdp.on('Page.screencastFrame', ({ data, sessionId: sid }) => {
+        socket.emit('frame', { sessionId: SESSION_ID, timestamp: Date.now(), data });
+        // Sin este acuse, Chrome manda un fotograma y no vuelve a mandar ninguno.
+        cdp.send('Page.screencastFrameAck', { sessionId: sid }).catch(() => {});
+      });
+      await cdp.send('Page.startScreencast', {
+        format: 'jpeg',
+        quality: 60,
+        maxWidth: 1280,
+        maxHeight: 720,
+        everyNthFrame: 2,
+      });
+      log('Streaming por screencast (~30fps, sin pausar el render)');
+      return;
+    } catch (err) {
+      // Si el screencast no esta disponible, se cae al metodo viejo: peor, pero grabar
+      // sigue funcionando. Un fallo de transmision no puede dejar sin grabador.
+      log(`Screencast no disponible (${err}); vuelvo a capturas periodicas`);
+      cdp = null;
+    }
+
     log('Starting frame stream at ~5fps');
     frameInterval = setInterval(async () => {
       try {
@@ -177,7 +223,7 @@ async function main() {
   socket.on('connect', async () => {
     log(`Connected to backend WS`);
     socket.emit('session:join', { sessionId: SESSION_ID });
-    startFrameStream();
+    void startFrameStream();
   });
 
   socket.on('connect_error', (err) => {
@@ -236,6 +282,9 @@ async function main() {
 
   async function cleanup() {
     if (frameInterval) clearInterval(frameInterval);
+    // El screencast tambien se para: si no, Chrome sigue empujando fotogramas contra un
+    // socket cerrado hasta que el contenedor muere.
+    if (cdp) await cdp.send('Page.stopScreencast').catch(() => {});
     socket.disconnect();
     await context.close().catch(() => null);
     await browser.close().catch(() => null);

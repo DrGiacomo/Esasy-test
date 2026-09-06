@@ -82,14 +82,14 @@ export default function TestDetailPage() {
         <LoadingSpinner />
       </div>
     );
-  if (!test) return <p className="text-gray-500">Test no encontrado</p>;
+  if (!test) return <p className="text-tinta-500">Test no encontrado</p>;
 
   return (
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{test.name}</h1>
-          <p className="mt-1 text-sm text-gray-500">{test.description}</p>
+          <h1 className="text-xl font-bold text-tinta-900">{test.name}</h1>
+          <p className="mt-1 text-sm text-tinta-500">{test.description}</p>
         </div>
         <div className="flex items-center gap-2">
           {/*
@@ -100,7 +100,7 @@ export default function TestDetailPage() {
           <select
             value={test.status}
             onChange={(e) => void cambiarEstado(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium focus:outline-none focus:border-indigo-500"
+            className="rounded-md border border-tinta-300 px-2 py-1 text-xs font-medium focus:outline-none focus:border-oro-500"
           >
             <option value="DRAFT">Borrador</option>
             <option value="ACTIVE">Activa</option>
@@ -126,10 +126,10 @@ export default function TestDetailPage() {
         un paso sin darselo hecho es la mitad del trabajo.
       */}
       {test.status === 'DRAFT' && (
-        <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-          <div className="text-sm text-amber-900">
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-espera-500 bg-espera-100 p-4">
+          <div className="text-sm text-espera-500">
             <p className="font-semibold">Esta prueba está en borrador y no se ejecutará.</p>
-            <p className="mt-1 text-amber-800">
+            <p className="mt-1 text-espera-500">
               Las pruebas en borrador se quedan fuera de las ejecuciones para que algo a medio
               hacer no dé falsas alarmas. Actívala cuando la des por buena.
             </p>
@@ -141,7 +141,7 @@ export default function TestDetailPage() {
       )}
 
       {test.status === 'ARCHIVED' && (
-        <div className="mb-4 rounded-xl border border-gray-300 bg-gray-50 p-4 text-sm text-gray-700">
+        <div className="mb-4 rounded-xl border border-tinta-300 bg-tinta-50 p-4 text-sm text-tinta-700">
           <p className="font-semibold">Esta prueba está archivada y no se ejecutará.</p>
           <p className="mt-1">
             Se conserva por si hace falta, pero queda fuera de las ejecuciones. Cámbiala a
@@ -150,8 +150,8 @@ export default function TestDetailPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Pasos ({test.steps.length})</h2>
+      <div className="rounded-xl border border-tinta-300 bg-tinta-50 p-5">
+        <h2 className="mb-4 text-sm font-semibold text-tinta-700">Pasos ({test.steps.length})</h2>
         <StepList
           steps={test.steps}
           testId={test.id}
@@ -166,13 +166,13 @@ export default function TestDetailPage() {
         modos: es el artefacto pensado para quien no programa (§3, «IA Contextual»).
       */}
       {test.documentation && (
-        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">Qué hace esta prueba</h2>
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+        <div className="mt-4 rounded-xl border border-tinta-300 bg-tinta-50 p-5">
+          <h2 className="mb-3 text-sm font-semibold text-tinta-900">Qué hace esta prueba</h2>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-tinta-700">
             {test.documentation}
           </div>
           {test.documentedAt && (
-            <p className="mt-3 text-xs text-gray-400">
+            <p className="mt-3 text-xs text-tinta-500">
               Generado por IA el {new Date(test.documentedAt).toLocaleString('es-ES')}. Si los pasos
               cambiaron después, vuelve a generarla.
             </p>
@@ -182,9 +182,9 @@ export default function TestDetailPage() {
 
       {/* El codigo TypeScript es lo primero que el §2.1 dice no ensenar en modo sencillo. */}
       {!sencillo && test.generatedCode && (
-        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-900 p-5">
-          <h2 className="mb-3 text-sm font-semibold text-gray-300">Código generado (TypeScript)</h2>
-          <pre className="overflow-x-auto text-xs text-gray-100">{test.generatedCode}</pre>
+        <div className="mt-4 rounded-xl border border-tinta-300 bg-tinta-900 p-5">
+          <h2 className="mb-3 text-sm font-semibold text-tinta-300">Código generado (TypeScript)</h2>
+          <pre className="overflow-x-auto text-xs text-tinta-200">{test.generatedCode}</pre>
         </div>
       )}
     </div>

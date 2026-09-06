@@ -23,9 +23,9 @@ export default function LoginPage() {
   }
 
   const campo =
-    'w-full rounded-md border border-oro-500/25 bg-white/5 px-3 py-2 text-sm text-tinta-100 ' +
+    'w-full rounded-md border border-oro-500/25 bg-tinta-50/5 px-3 py-2 text-sm text-tinta-100 ' +
     'placeholder:text-tinta-100/30 transition-all duration-[180ms] ' +
-    'focus:border-oro-500/80 focus:bg-white/[0.07] focus:outline-none focus:ring-[3px] focus:ring-oro-500/15';
+    'focus:border-oro-500/80 focus:bg-tinta-50/[0.07] focus:outline-none focus:ring-[3px] focus:ring-oro-500/15';
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-tinta-900 p-4">

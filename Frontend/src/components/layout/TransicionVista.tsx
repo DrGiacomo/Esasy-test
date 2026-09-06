@@ -41,7 +41,13 @@ export function TransicionVista({ children }: { children: React.ReactNode }) {
         <i />
         <i />
       </div>
-      <div key={pathname} className="vista-entrando">
+      {/*
+        `h-full` no es decorativo: sin él, este div no tiene altura propia y las páginas que
+        usan `h-full` —el grabador, el editor de flujo— se quedaban sin altura y colapsaban
+        al alto de su contenido, dejando media pantalla en blanco. Lo introdujo esta misma
+        transición el 2026-09-06 y se vio en una captura del usuario, no en un test.
+      */}
+      <div key={pathname} className="vista-entrando h-full">
         {children}
       </div>
     </>

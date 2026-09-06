@@ -46,8 +46,14 @@
   --color-tinta-100: #F5EFE6;
   --color-tinta-200: #EBE1D3;
   --color-tinta-300: #DCCFBE;
-  --color-tinta-400: #B7A597;
-  --color-tinta-500: #8A7264;
+  /* Estos dos se oscurecieron el 2026-09-06 tras MEDIR el contraste, no a ojo:
+     el primero daba 2,24:1 sobre una tarjeta clara y el segundo 4,25:1, cuando el
+     mínimo legible es 4,5:1. El gris que había antes tampoco llegaba (2,54:1), así
+     que esto arregla algo que ya venía mal.
+       tinta-400 · 3,18:1 · iconos, bordes y marcas de agua. NO para texto.
+       tinta-500 · 5,04:1 · el texto secundario. */
+  --color-tinta-400: #9E8878;
+  --color-tinta-500: #7E6659;
   --color-tinta-600: #6E5B52;
   --color-tinta-700: #4A3B36;
   --color-tinta-800: #2A1E20;

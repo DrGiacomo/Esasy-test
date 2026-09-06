@@ -18,19 +18,19 @@ export function TestCard({ test, onArchive }: Props) {
   }
 
   return (
-    <div className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50">
+    <div className="group flex items-center gap-2 rounded-lg border border-tinta-300 bg-tinta-50 hover:border-oro-300 hover:bg-sangre-50">
       <Link
         to={ROUTES.TEST_DETAIL(test.id)}
         className="flex flex-1 items-center gap-4 px-4 py-3 min-w-0"
       >
-        <FlaskConical size={18} className="text-indigo-500 shrink-0" />
-        <span className="flex-1 text-sm font-medium text-gray-800 truncate">{test.name}</span>
+        <FlaskConical size={18} className="text-oro-500 shrink-0" />
+        <span className="flex-1 text-sm font-medium text-tinta-800 truncate">{test.name}</span>
         <StatusBadge status={test.status} />
-        <ChevronRight size={16} className="text-gray-400 group-hover:text-indigo-500 shrink-0" />
+        <ChevronRight size={16} className="text-tinta-500 group-hover:text-oro-500 shrink-0" />
       </Link>
       <button
         onClick={handleArchive}
-        className="shrink-0 mr-2 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+        className="shrink-0 mr-2 rounded-lg p-2 text-tinta-500 hover:bg-fallo-100 hover:text-fallo-500 transition-colors"
         title="Eliminar test"
       >
         <Trash2 size={15} />

@@ -21,14 +21,17 @@ export function Header() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-end gap-4 border-b border-gray-200 bg-white px-6">
-      <div className="flex items-center gap-2 text-sm text-gray-600">
-        <User size={16} />
+    // Oscura, igual que la barra lateral: entre las dos forman una L que enmarca el
+    // contenido. Antes era blanca —y despues casi blanca, que era lo mismo— asi que
+    // partia la pantalla en dos mitades sin relacion.
+    <header className="flex h-16 items-center justify-end gap-4 border-b border-oro-500/20 bg-sangre-900 px-6">
+      <div className="flex items-center gap-2 text-sm text-tinta-300">
+        <User size={16} className="text-oro-500" />
         <span>{user?.email}</span>
       </div>
       <button
         onClick={() => void handleLogout()}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-tinta-400 transition-colors duration-[180ms] hover:bg-sangre-700/60 hover:text-oro-200"
       >
         <LogOut size={16} />
         Salir

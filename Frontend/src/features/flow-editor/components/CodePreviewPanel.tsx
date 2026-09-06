@@ -5,10 +5,10 @@ export function CodePreviewPanel({ code }: { code: string | null }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="border-t border-gray-200">
+    <div className="border-t border-tinta-300">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 bg-gray-800 px-4 py-2 text-xs font-medium text-gray-300 hover:bg-gray-700"
+        className="flex w-full items-center gap-2 bg-tinta-800 px-4 py-2 text-xs font-medium text-tinta-300 hover:bg-tinta-700"
       >
         <Code2 size={14} />
         <span>Código TypeScript (Power Users)</span>
@@ -19,7 +19,7 @@ export function CodePreviewPanel({ code }: { code: string | null }) {
         )}
       </button>
       {open && (
-        <pre className="max-h-64 overflow-auto bg-gray-900 p-4 text-xs text-gray-100">
+        <pre className="max-h-64 overflow-auto bg-tinta-900 p-4 text-xs text-tinta-200">
           {code ?? '// El código se genera al guardar los pasos'}
         </pre>
       )}
