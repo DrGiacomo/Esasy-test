@@ -9,6 +9,7 @@ import {
 import { InjectQueue } from '@nestjs/bullmq';
 import { ExecutionStatus } from '@prisma/client';
 import { Queue } from 'bullmq';
+import { JwtService } from '@nestjs/jwt';
 import { createClient } from 'redis';
 import type { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -26,8 +27,35 @@ export class ExecutionsService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
     @InjectQueue(EXECUTION_QUEUE) private readonly queue: Queue,
   ) {}
+
+  /**
+   * Pase para ver los artefactos de UNA ejecucion.
+   *
+   * Por que existe: `<video>` y `<img>` no pueden mandar cabeceras, asi que la credencial
+   * tiene que viajar en la direccion. Hasta hoy viajaba el token de sesion completo, y una
+   * direccion se guarda en muchos sitios -el log del servidor, el historial del navegador,
+   * cualquier intermediario-. Quien lo encontrara tenia la cuenta entera.
+   *
+   * Este pase solo abre los artefactos de esta ejecucion y caduca en diez minutos. Si acaba
+   * en un log, no sirve para nada mas.
+   */
+  async emitirPaseDeArtefactos(
+    executionId: string,
+    user: JwtPayload,
+  ): Promise<{ token: string; expiraEnSegundos: number }> {
+    await this.findById(executionId, user); // valida que la ejecucion es de su organizacion
+    const expiraEnSegundos = 600;
+    return {
+      token: this.jwt.sign(
+        { kind: 'artifact', executionId, orgId: user.orgId },
+        { expiresIn: expiraEnSegundos },
+      ),
+      expiraEnSegundos,
+    };
+  }
 
   async onModuleInit(): Promise<void> {
     try {

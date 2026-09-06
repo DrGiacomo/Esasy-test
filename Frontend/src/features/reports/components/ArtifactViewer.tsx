@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Image, FileCode } from 'lucide-react';
-import { useAuthStore } from '@/store/auth.store';
+import { api } from '@/lib/api/axios.client';
 import { useUiMode } from '@/hooks/useUiMode';
 
 interface Props {
@@ -8,13 +9,47 @@ interface Props {
   traceUrl: string | null;
 }
 
+/** Las URLs de artefacto son `/artifacts/<executionId>/<archivo>`. */
+function sacarExecutionId(...urls: (string | null)[]): string | null {
+  for (const url of urls) {
+    const trozos = url?.split('/') ?? [];
+    const i = trozos.indexOf('artifacts');
+    if (i >= 0 && trozos[i + 1]) return trozos[i + 1];
+  }
+  return null;
+}
+
 export function ArtifactViewer({ screenshotUrl, videoUrl, traceUrl }: Props) {
   const { sencillo } = useUiMode();
-  // Los artefactos se sirven autenticados; <video>/<a> no mandan headers,
-  // así que el token de acceso viaja en query string.
-  const token = useAuthStore((s) => s.accessToken);
+
+  // `<video>` e `<img>` no pueden mandar cabeceras, así que la credencial va en la
+  // dirección. Antes iba el token de sesión ENTERO, y una dirección se guarda en el log del
+  // servidor, en el historial del navegador y en cualquier intermediario: quien lo viera
+  // tenía la cuenta. Ahora se pide un pase que solo abre los artefactos de esta ejecución y
+  // caduca en diez minutos.
+  const executionId = sacarExecutionId(screenshotUrl, videoUrl, traceUrl);
+  const [pase, setPase] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!executionId) return;
+    let vigente = true;
+    api
+      .get<{ token: string }>(`/executions/${executionId}/artifact-token`)
+      .then((res) => {
+        if (vigente) setPase(res.data.token);
+      })
+      .catch(() => {
+        // Sin pase no se pintan los artefactos. Es preferible no enseñarlos a enseñarlos
+        // rotos, y el motivo queda en la consola del navegador.
+        if (vigente) setPase(null);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [executionId]);
+
   const withToken = (url: string | null): string | null =>
-    url && token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
+    url && pase ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(pase)}` : null;
 
   const screenshot = withToken(screenshotUrl);
   const video = withToken(videoUrl);

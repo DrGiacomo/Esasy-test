@@ -50,6 +50,18 @@ export class ExecutionsController {
     return this.executionsService.findById(id, user);
   }
 
+  /**
+   * Pase de corta vida para ver los artefactos de esta ejecucion desde `<video>`/`<img>`,
+   * que no pueden mandar cabeceras. Solo sirve para esta ejecucion y caduca en 10 minutos.
+   */
+  @Get(':id/artifact-token')
+  emitirPaseDeArtefactos(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<{ token: string; expiraEnSegundos: number }> {
+    return this.executionsService.emitirPaseDeArtefactos(id, user);
+  }
+
   @Get(':id/results')
   findResults(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.executionsService.findResults(id, user);
