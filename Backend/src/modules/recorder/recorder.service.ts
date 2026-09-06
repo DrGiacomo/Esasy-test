@@ -176,7 +176,27 @@ export class RecorderService implements OnModuleInit, OnModuleDestroy {
     if (!suite) throw new NotFoundException('Test suite not found');
 
     const rawSteps = rec.steps as unknown as CapturedStep[];
-    const mappedSteps = this.collapseSteps(rawSteps, suite.project.baseUrl);
+
+    // El primer paso SIEMPRE es ir a donde se grabó, y hasta hoy no estaba.
+    //
+    // La grabación empieza cuando el usuario hace algo, y para entonces el navegador ya
+    // está en la página: esa primera navegación nunca llegó a ser un paso. Al reproducir,
+    // el navegador arranca EN BLANCO y el primer clic espera 30 segundos a un elemento que
+    // no existe porque no se ha ido a ninguna parte.
+    //
+    // No fallaba «a veces»: no podía funcionar NINGUNA prueba grabada. No se vio antes
+    // porque las pruebas de ejemplo se siembran con su `navigate` escrito a mano, así que
+    // el único material que lo habría delatado era una grabación de verdad. La primera que
+    // hubo —`www.frivclassic.com`, 2026-09-06— lo delató a la primera.
+    //
+    // Se añade solo si la grabación no empieza ya por una navegación, para no duplicarla.
+    const empiezaNavegando = rawSteps[0]?.type === 'navigate';
+    const pasosConEntrada: CapturedStep[] =
+      empiezaNavegando || !rec.targetUrl
+        ? rawSteps
+        : [{ type: 'navigate', url: rec.targetUrl }, ...rawSteps];
+
+    const mappedSteps = this.collapseSteps(pasosConEntrada, suite.project.baseUrl);
 
     return this.prisma.$transaction(async (tx) => {
       const test = await tx.test.create({

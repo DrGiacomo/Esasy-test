@@ -67,7 +67,18 @@ export class ExecutionProcessor extends WorkerHost {
 
       const tests = await this.getTests(projectId, suiteId, testId);
       if (tests.length === 0) {
-        await this.transition(publisher, executionId, ExecutionStatus.COMPLETED);
+        // NO se marca COMPLETED. Pedir que se ejecute algo y recibir un verde sin que se
+        // haya ejecutado nada es dar por buena una prueba que nadie comprobo: es el error
+        // que la biblia del proyecto declara CRITICO (`P5`).
+        //
+        // Pasaba de verdad, y con el caso mas comun que hay: una prueba recien convertida
+        // desde una grabacion nace en DRAFT, y aqui solo entran las ACTIVE. El usuario
+        // pulsaba ejecutar sobre su grabacion nueva y la plataforma le respondia COMPLETED.
+        await this.failExecution(
+          publisher,
+          executionId,
+          await this.porQueNoHayNada(projectId, suiteId, testId),
+        );
         return;
       }
 
@@ -177,11 +188,6 @@ export class ExecutionProcessor extends WorkerHost {
   }
 
   /**
-   * Espera a que el contenedor termine, compitiendo contra:
-   *  - cancelación del usuario (poll del status en BD cada 3s)
-   *  - timeout máximo de ejecución
-   */
-  /**
    * Deja por escrito lo que dijo el contenedor cuando no salio con codigo 0.
    *
    * Guarda dos cosas y a proposito:
@@ -221,6 +227,12 @@ export class ExecutionProcessor extends WorkerHost {
     }
   }
 
+  /**
+   * Espera a que el contenedor termine, compitiendo contra tres cosas:
+   *  - el aviso de cancelacion por Redis (instantaneo)
+   *  - el sondeo del estado en la base (red de seguridad, cada CANCEL_POLL_MS)
+   *  - el tiempo maximo de ejecucion
+   */
   private async waitForContainerOrAbort(
     containerId: string,
     executionId: string,
@@ -240,14 +252,17 @@ export class ExecutionProcessor extends WorkerHost {
 
     // Aviso instantaneo por Redis. Se suscribe con su PROPIA conexion: en node-redis un
     // cliente suscrito no puede hacer otra cosa, y compartir el del job lo dejaria mudo.
-    let avisoCancelacion: RedisClient | null = null;
+    // En un contenedor y no en una variable suelta: TypeScript reduce a `never` una
+    // variable que solo se asigna dentro del callback de una promesa, y en el `finally` ya
+    // no la deja usar. Con el objeto, el tipo se conserva sin necesidad de aserciones.
+    const conexiones: { aviso?: RedisClient } = {};
     const avisoP = new Promise<WaitOutcome>((resolve) => {
       // Sin REDIS_URL no hay atajo y no se abre nada. Ademas de ser lo correcto, evita que
       // los tests -que no tienen Redis- dejen una conexion colgada impidiendo que jest
       // termine. La cancelacion sigue funcionando por el sondeo.
       if (!process.env.REDIS_URL) return;
       const cliente = createClient({ url: process.env.REDIS_URL });
-      avisoCancelacion = cliente;
+      conexiones.aviso = cliente;
       cliente
         .connect()
         .then(() =>
@@ -284,7 +299,7 @@ export class ExecutionProcessor extends WorkerHost {
       timers.forEach(clearTimeout);
       // La conexion del aviso es de este job: se cierra con el o se acumulan una por
       // ejecucion hasta agotar las conexiones de Redis.
-      await (avisoCancelacion as RedisClient | null)?.disconnect().catch(() => undefined);
+      await conexiones.aviso?.disconnect().catch(() => undefined);
     }
   }
 
@@ -394,6 +409,33 @@ export class ExecutionProcessor extends WorkerHost {
 
   private isDeleted(err: unknown): boolean {
     return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025';
+  }
+
+  /**
+   * Por que no habia nada que ejecutar, dicho para que lo entienda quien lo lee en pantalla.
+   * Distingue los tres motivos posibles en vez de soltar un «no hay tests»: el usuario tiene
+   * que saber si le falta activar algo, si borro la prueba o si la suite esta vacia.
+   */
+  private async porQueNoHayNada(
+    projectId: string,
+    suiteId?: string,
+    testId?: string,
+  ): Promise<string> {
+    if (testId) {
+      const test = await this.prisma.test
+        .findUnique({ where: { id: testId }, select: { name: true, status: true } })
+        .catch(() => null);
+      if (!test) return 'La prueba que se pidió ejecutar ya no existe.';
+      if (test.status !== 'ACTIVE') {
+        return (
+          `La prueba «${test.name}» está en estado ${test.status} y solo se ejecutan las ` +
+          `activas. Actívala y vuelve a lanzarla.`
+        );
+      }
+      return `La prueba «${test.name}» no tiene ningún paso habilitado que ejecutar.`;
+    }
+    const ambito = suiteId ? 'la suite elegida' : 'este proyecto';
+    return `No hay ninguna prueba activa en ${ambito}. Nada que ejecutar.`;
   }
 
   private async getTests(projectId: string, suiteId?: string, testId?: string) {

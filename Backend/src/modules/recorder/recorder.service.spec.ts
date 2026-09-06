@@ -159,3 +159,71 @@ describe('RecorderService.convertToTest', () => {
     });
   });
 });
+
+/**
+ * El fallo que delató la primera grabación real (`www.frivclassic.com`, 2026-09-06): la
+ * prueba no incluía ir a la página donde se grabó, así que al reproducirla el navegador
+ * arrancaba en blanco y el primer clic esperaba 30 segundos a un elemento inexistente.
+ * Ninguna prueba grabada podía funcionar.
+ */
+describe('convertToTest — la prueba empieza yendo a donde se grabó', () => {
+  function convertirDesde(targetUrl: string | null, steps: unknown[], baseUrl: string | null) {
+    const { prisma, service } = build();
+    prisma.recording.findUnique.mockResolvedValue({ id: 'r1', orgId: 'org-1', targetUrl, steps });
+    prisma.testSuite.findFirst.mockResolvedValue({ id: 'suite-1', project: { baseUrl } });
+    prisma.test.create.mockResolvedValue({ id: 'test-1' });
+    const tx = {
+      test: { create: prisma.test.create },
+      testStep: { create: prisma.testStep.create },
+    };
+    prisma.$transaction.mockImplementation((cb: (t: typeof tx) => unknown) => cb(tx));
+    return { prisma, service, tx };
+  }
+
+  it('antepone la navegación a la URL grabada cuando la grabación empieza con un clic', async () => {
+    const { prisma, service } = convertirDesde(
+      'https://www.ejemplo.com/',
+      [{ type: 'click', selector: '#boton' }],
+      null,
+    );
+    await service.convertToTest('r1', 'suite-1', 'T', 'org-1');
+
+    const creados = prisma.testStep.create.mock.calls as Array<
+      [{ data: { order: number; action: string; value: string | null } }]
+    >;
+    expect(creados).toHaveLength(2);
+    expect(creados[0][0].data).toMatchObject({
+      order: 0,
+      action: 'navigate',
+      value: 'https://www.ejemplo.com/',
+    });
+    expect(creados[1][0].data).toMatchObject({ order: 1, action: 'click' });
+  });
+
+  it('NO la duplica si la grabación ya empieza navegando', async () => {
+    const { prisma, service } = convertirDesde(
+      'https://www.ejemplo.com/',
+      [{ type: 'navigate', url: 'https://www.ejemplo.com/otra' }],
+      null,
+    );
+    await service.convertToTest('r1', 'suite-1', 'T', 'org-1');
+    const creados = prisma.testStep.create.mock.calls as Array<
+      [{ data: { value: string | null } }]
+    >;
+    expect(creados).toHaveLength(1);
+    expect(creados[0][0].data.value).toBe('https://www.ejemplo.com/otra');
+  });
+
+  it('la navegación añadida también se guarda relativa al proyecto', async () => {
+    const { prisma, service } = convertirDesde(
+      'https://app.ejemplo.com/panel',
+      [{ type: 'click', selector: '#boton' }],
+      'https://app.ejemplo.com',
+    );
+    await service.convertToTest('r1', 'suite-1', 'T', 'org-1');
+    const creados = prisma.testStep.create.mock.calls as Array<
+      [{ data: { value: string | null } }]
+    >;
+    expect(creados[0][0].data.value).toBe('/panel');
+  });
+});

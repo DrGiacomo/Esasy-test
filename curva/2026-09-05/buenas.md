@@ -189,3 +189,54 @@ Tres mejoras del `perfeccionar` del día, todas verificadas:
 
 Y `main.ts` recuperó su `enableShutdownHooks()` —una línea que el worker sí tenía— así que el
 backend deja de morir por `137`.
+
+## 15. Una captura del usuario desmontó dos exámenes que estaban en verde
+
+El usuario grabó una prueba en `www.frivclassic.com` —una web que **nadie preparó**— y mandó la
+captura del resultado: `FAILED`, 36,1 s, `TimeoutError ... waiting for locator('#flashObject')`
+y un vídeo completamente negro.
+
+**El diagnóstico obvio era Flash. El real era otro:**
+
+```
+0 · click #flashObject       <- la prueba empieza PULSANDO
+1 · click #flashObject
+2 · navigate https://www.friv.com/...
+```
+
+**Falta el paso de ir a la página donde se grabó.** La grabación sí guarda dónde empezó
+(`targetUrl`), pero al convertirla en prueba esa navegación **no se incluía**. Al reproducirla,
+el navegador arrancaba en blanco y el primer clic esperaba sus 30 segundos a un elemento que no
+existía porque no se había ido a ninguna parte. El vídeo negro no era un fallo de grabación:
+**era que nunca hubo página**.
+
+**Y no fallaba a veces: no podía funcionar NINGUNA prueba grabada.**
+
+| Con su grabación | Antes | Después |
+|---|---|---|
+| Resultado | `FAILED` a los 36,1 s | **`COMPLETED` en 12,6 s** |
+| Pasos | Muere en el primero | **8 de 8 PASSED** |
+| Vídeo | Negro | **1,4 MB con la web** |
+| Captura final | Vacía | La portada de Friv |
+
+**Por qué no se había visto en cuatro meses:** las pruebas de ejemplo se siembran con su
+`navigate` escrito a mano. **El único material capaz de delatarlo era una grabación de verdad**,
+y la primera que hubo lo delató a la primera. Es `V6` en estado puro.
+
+## 16. El mismo caso destapó un COMPLETED que no había ejecutado nada
+
+Al reconvertir la grabación, la prueba nueva nace en `DRAFT` — y el worker solo ejecuta las
+`ACTIVE`. Resultado: se pedía ejecutar, no había nada que ejecutar, y la plataforma respondía
+**`COMPLETED`**. En verde.
+
+Eso es exactamente `P5` de la biblia escrita ese mismo día: *dar por buena una prueba que nadie
+comprobó es el error crítico*. **Y estaba pasando con el caso más frecuente que existe**: la
+prueba recién grabada.
+
+Ahora responde:
+
+> `FAILED` — *«La prueba «frivclassic - reconvertida» está en estado DRAFT y solo se ejecutan
+> las activas. Actívala y vuelve a lanzarla.»*
+
+Con sus tres variantes distinguidas —no existe, está en borrador, o la suite está vacía— porque
+«no hay tests» no le dice a nadie qué hacer a continuación.

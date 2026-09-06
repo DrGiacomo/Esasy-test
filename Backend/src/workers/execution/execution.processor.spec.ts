@@ -19,6 +19,7 @@ type ProcessorInternals = {
     containerId: string,
     secretValues: string[],
   ): Promise<void>;
+  porQueNoHayNada(projectId: string, suiteId?: string, testId?: string): Promise<string>;
 };
 
 function buildProcessor() {
@@ -280,5 +281,45 @@ describe('ExecutionProcessor — logs del fallo con los secretos tapados', () =>
     ) as unknown as ProcessorInternals;
 
     await expect(processor.guardarLogsDelFallo('exec-3', 'cont-3', [])).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Pedir que se ejecute algo y recibir COMPLETED sin que se haya ejecutado nada es dar por
+ * buena una prueba que nadie comprobó: el error que la biblia declara crítico (`P5`).
+ * Pasaba con el caso más común que hay — una prueba recién convertida desde una grabación
+ * nace en DRAFT y solo se ejecutan las ACTIVE.
+ */
+describe('ExecutionProcessor — cuando no hay nada que ejecutar', () => {
+  function build(test: { name: string; status: string } | null) {
+    const prisma = { test: { findUnique: jest.fn().mockResolvedValue(test) } };
+    const processor = new ExecutionProcessor(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    return processor as unknown as ProcessorInternals;
+  }
+
+  it('dice que la prueba está en DRAFT y cómo arreglarlo', async () => {
+    const processor = build({ name: 'Mi grabación', status: 'DRAFT' });
+    const motivo = await processor.porQueNoHayNada('p1', undefined, 't1');
+    expect(motivo).toContain('Mi grabación');
+    expect(motivo).toContain('DRAFT');
+    expect(motivo).toContain('Actívala');
+  });
+
+  it('dice que la prueba ya no existe', async () => {
+    const processor = build(null);
+    const motivo = await processor.porQueNoHayNada('p1', undefined, 't1');
+    expect(motivo).toContain('ya no existe');
+  });
+
+  it('distingue entre la suite elegida y el proyecto entero', async () => {
+    const processor = build(null);
+    expect(await processor.porQueNoHayNada('p1', 's1')).toContain('la suite elegida');
+    expect(await processor.porQueNoHayNada('p1')).toContain('este proyecto');
   });
 });

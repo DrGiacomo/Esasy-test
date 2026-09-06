@@ -284,3 +284,45 @@ cabecera → aceptado; pase de otra ejecución → rechazado.
 
 **Arreglado en el commit siguiente**, sin reescribir historia: el commit malo se queda, y este
 apunte explica por qué.
+
+---
+
+## 12. Dejé un comentario huérfano encima de otro método
+
+**Qué pasó.** Al insertar un método nuevo justo antes de `waitForContainerOrAbort`, lo puse
+**entre el JSDoc y su función**. El comentario quedó describiendo un método que no era:
+
+```ts
+/**
+ * Espera a que el contenedor termine, compitiendo contra:
+ *  - cancelación del usuario (poll del status en BD cada 3s)   <- ya no es cada 3 s
+ */
+/**
+ * Deja por escrito lo que dijo el contenedor...                <- este es otro método
+ */
+```
+
+**Causa.** Se insertó buscando el nombre de la función como ancla, sin mirar qué había encima.
+Y de paso quedó **desactualizado**: decía «cada 3s» cuando el sondeo había pasado a 15 s ese
+mismo día.
+
+**Lección.** *Un método no empieza en su `private async`: empieza en su comentario.* Al insertar
+código antes de una función hay que anclarse en el bloque entero, no en la línea de la firma.
+Lo cazó el lint por otra razón —una aserción de tipos sobrante— y no una relectura.
+
+Es `A10`: *un comentario es la intención de quien lo escribió, no lo que hace la línea de
+abajo*. Aquí ni siquiera era la línea de abajo.
+
+## 13. El compilador y el linter se contradijeron, y estuve a punto de callar a uno
+
+**Qué pasó.** ESLint marcaba una aserción de tipos como innecesaria; al quitarla, TypeScript
+fallaba con `Property 'disconnect' does not exist on type 'never'`.
+
+**Causa real.** TypeScript reduce a `never` una variable que **solo se asigna dentro del
+callback de una promesa**: no puede saber que ese callback corrió. La aserción tapaba eso.
+
+**Lección.** *Cuando dos herramientas se contradicen, las dos tienen razón sobre algo distinto
+y la salida no es silenciar a una.* Se resolvió guardando la conexión en un objeto contenedor:
+sin aserción —contenta ESLint— y sin `never` —contento el compilador—. Silenciar el aviso
+habría dejado el diagnóstico real sin ver: **que ese código depende de un callback que puede no
+haber corrido**.
