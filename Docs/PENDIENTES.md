@@ -223,6 +223,20 @@ fingía está fuera del código.
 
 ---
 
+## 10. Lo que queda vivo del `2026-09-06`
+
+| # | Pendiente | Prioridad | Estado |
+|---|---|---|---|
+| 10.1 | **El vídeo de una ejecución «se queda en la imagen»** — reportado por el usuario grabando en `frivclassic.com`. Hay dos sospechas y ninguna medida: que el vídeo dure lo que dura el test (y sea correcto), o que Playwright no capture bien un canvas acelerado por GPU. **Se mide contando los fotogramas del `.webm` que ya está en el volumen**, no discutiendo | 🟠 | ABIERTO |
+| 10.2 | **Una grabación no sabe si ya se convirtió en prueba** — no hay relación entre `Recording` y `Test`. Por eso el diagrama del flujo no puede decir «cuántas quedan por convertir», que es el dato que de verdad importa de esa parada | 🟡 | ABIERTO |
+| 10.3 | **La entrada del login** — están elegidas **Eclipse** y **Grabando** (`Animaciones/demos/03` y `04`), y falta llevar una a la aplicación con las tres salvaguardas de Alma: una vez por pestaña, interruptor para revisarla y failsafe | 🟢 | ABIERTO |
+| 10.4 | **Los pasos capturados en vivo enseñan selectores crudos** — la lista lateral del grabador muestra `click #flashObject` mientras grabas. Es el mismo problema que se arregló en las descripciones, en otro sitio: `P3` de la biblia | 🟡 | ABIERTO |
+
+> **De dónde salen 10.1 y 10.4:** de una captura de pantalla del usuario usando la plataforma.
+> Ninguno de los dos lo habría encontrado un test.
+
+---
+
 ### Mejoras futuras (no bloqueantes, fuera del roadmap original)
 - Self-healing con video (no solo screenshot) — fase 2 de la visión multimodal.
 - Documentación automática de tests (`documentation.service`) y métricas de coste IA.
